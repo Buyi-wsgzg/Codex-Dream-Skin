@@ -164,6 +164,8 @@ function createFixture({
   };
   const context = {
     window: {
+      innerWidth: 1280,
+      innerHeight: 800,
       matchMedia() { return { matches: osAppearance === "dark" }; },
     },
     document,
@@ -343,6 +345,7 @@ await Promise.resolve();
 assert.equal(analyzed.rootClasses.has("dream-theme-dark"), true);
 assert.equal(analyzed.rootClasses.has("dream-theme-light"), false);
 assert.equal(analyzed.rootClasses.has("dream-art-wide"), true);
+assert.equal(analyzed.rootClasses.has("dream-art-fit-width"), true);
 assert.equal(analyzed.rootClasses.has("dream-task-banner"), true);
 assert.equal(analyzed.rootClasses.has("dream-safe-left"), true);
 assert.notEqual(analyzed.rootStyles.get("--dream-accent"), "rgb(216 104 119)");
@@ -354,6 +357,7 @@ const standardArt = createFixture({
 vm.runInNewContext(payload, standardArt.context);
 await Promise.resolve();
 assert.equal(standardArt.rootClasses.has("dream-art-standard"), true);
+assert.equal(standardArt.rootClasses.has("dream-art-fit-width"), false);
 assert.equal(standardArt.rootClasses.has("dream-task-ambient"), true);
 assert.equal(standardArt.rootClasses.has("dream-task-banner"), false);
 
@@ -364,8 +368,15 @@ const mediumWide = createFixture({
 vm.runInNewContext(payload, mediumWide.context);
 await Promise.resolve();
 assert.equal(mediumWide.rootClasses.has("dream-art-wide"), true);
+assert.equal(mediumWide.rootClasses.has("dream-art-fit-width"), true);
+assert.equal(mediumWide.rootStyles.get("--dream-art-fill"), "76.19%");
 assert.equal(mediumWide.rootClasses.has("dream-task-ambient"), true);
 assert.equal(mediumWide.rootClasses.has("dream-task-banner"), false);
+mediumWide.context.window.innerWidth = 2100;
+mediumWide.context.window.innerHeight = 1000;
+mediumWide.context.window.__CODEX_DREAM_SKIN_STATE__.ensure();
+assert.equal(mediumWide.rootClasses.has("dream-art-fit-width"), false);
+assert.equal(mediumWide.rootStyles.get("--dream-art-fill"), "100.00%");
 
 const nativeLight = createFixture({ shellPresent: true, shellAppearance: "light" });
 vm.runInNewContext(payload, nativeLight.context);
@@ -392,6 +403,7 @@ assert.equal(nativeObserver.takeRecords().length, 0,
 const metadataWide = createFixture({ shellPresent: true });
 vm.runInNewContext(buildPayload({ artMetadata: { ratio: 16 / 9 } }), metadataWide.context);
 assert.equal(metadataWide.rootClasses.has("dream-art-wide"), true);
+assert.equal(metadataWide.rootClasses.has("dream-art-fit-width"), false);
 assert.equal(metadataWide.rootClasses.has("dream-art-standard"), false);
 
 console.log("PASS: renderer applies adaptive theme metadata and preserves transparent auxiliary windows.");

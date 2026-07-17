@@ -9,6 +9,7 @@
     "dream-layout-adaptive",
     "dream-layout-classic",
     "dream-art-wide",
+    "dream-art-fit-width",
     "dream-art-standard",
     "dream-focus-left",
     "dream-focus-center",
@@ -24,6 +25,7 @@
   const ROOT_PROPERTIES = [
     "--dream-art",
     "--dream-art-position",
+    "--dream-art-fill",
     "--dream-focus-x",
     "--dream-focus-y",
     "--dream-accent",
@@ -110,6 +112,7 @@
   const previous = window[STATE_KEY];
   if (previous?.observer) previous.observer.disconnect();
   if (previous?.timer) clearInterval(previous.timer);
+  if (previous?.onResize) window.removeEventListener?.("resize", previous.onResize);
   if (previous?.scheduler?.timeout) clearTimeout(previous.scheduler.timeout);
   if (previous?.artUrl) URL.revokeObjectURL(previous.artUrl);
   const artUrl = (() => {
@@ -335,6 +338,11 @@
     root.classList.toggle("dream-layout-adaptive", config.layout === "adaptive");
     root.classList.toggle("dream-layout-classic", config.layout === "classic");
     root.classList.toggle("dream-art-wide", config.layout === "adaptive" && profile.aspect >= 1.75);
+    const viewportWidth = Number(window.innerWidth) || root.clientWidth || profile.aspect;
+    const viewportHeight = Number(window.innerHeight) || root.clientHeight || 1;
+    const viewportAspect = viewportWidth / Math.max(1, viewportHeight);
+    root.classList.toggle("dream-art-fit-width", config.layout === "adaptive" &&
+      profile.aspect >= 1.75 && profile.aspect > viewportAspect * 1.18);
     root.classList.toggle("dream-art-standard", config.layout === "adaptive" && profile.aspect < 1.75);
     for (const value of ["left", "center", "right"]) {
       root.classList.toggle(`dream-focus-${value}`, focus === value);
@@ -347,6 +355,8 @@
     }
     root.style.setProperty("--dream-art", `url("${artUrl}")`);
     root.style.setProperty("--dream-art-position", `${Math.round(focusX * 100)}% ${Math.round(focusY * 100)}%`);
+    root.style.setProperty("--dream-art-fill",
+      `${Math.min(100, viewportAspect / Math.max(.01, profile.aspect) * 100).toFixed(2)}%`);
     root.style.setProperty("--dream-focus-x", String(focusX));
     root.style.setProperty("--dream-focus-y", String(focusY));
     root.style.setProperty("--dream-accent", accent);
@@ -428,6 +438,7 @@
     clearSkinDom();
     state?.observer?.disconnect();
     if (state?.timer) clearInterval(state.timer);
+    if (state?.onResize) window.removeEventListener?.("resize", state.onResize);
     if (state?.scheduler?.timeout) clearTimeout(state.scheduler.timeout);
     if (state?.artUrl) URL.revokeObjectURL(state.artUrl);
     delete window[STATE_KEY];
@@ -452,9 +463,11 @@
     attributes: true,
     attributeFilter: ["class", "data-theme", "data-appearance", "data-color-mode"],
   });
+  const onResize = () => scheduleEnsure();
+  window.addEventListener?.("resize", onResize);
   const timer = setInterval(ensure, 5000);
   window[STATE_KEY] = {
-    ensure, cleanup, observer, timer, scheduler, artUrl, profile, config, installToken, version: "1.3.0",
+    ensure, cleanup, observer, timer, onResize, scheduler, artUrl, profile, config, installToken, version: "1.3.0",
   };
   ensure();
   analyzeArt().then((result) => {

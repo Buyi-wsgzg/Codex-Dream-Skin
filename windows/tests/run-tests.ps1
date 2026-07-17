@@ -492,7 +492,10 @@ try {
     '.app-shell-main-content-top-fade',
     '.thread-scroll-container .bg-gradient-to-t.from-token-main-surface-primary',
     '--dream-immersive-composer',
+    '--dream-art-fill',
     'background-position: var(--dream-art-position)',
+    'dream-art-fit-width',
+    'overflow: visible !important',
     '.dream-home-utility',
     ':has(.dream-home-utility) .composer-surface-chrome',
     ':is(.dream-task-ambient, .dream-task-banner):has(main.main-surface:not(.dream-home-shell))'
@@ -549,7 +552,8 @@ try {
 
   $rendererSource = Read-DreamSkinUtf8File -Path (Join-Path $Root 'assets\renderer-inject.js')
   foreach ($requiredRendererBehavior in @(
-    'dream-home-utility', 'artMetadata', 'detectShellAppearance', 'dream-layout-classic', 'dream-polaroid'
+    'dream-home-utility', 'artMetadata', 'detectShellAppearance', 'dream-layout-classic',
+    'dream-art-fit-width', 'dream-polaroid'
   )) {
     if (-not $rendererSource.Contains($requiredRendererBehavior)) {
       throw "Renderer adaptive behavior is missing: $requiredRendererBehavior"

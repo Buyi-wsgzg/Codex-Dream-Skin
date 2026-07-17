@@ -3,6 +3,7 @@
   --dream-accent: oklch(0.66 0.15 18);
   --dream-accent-ink: oklch(0.98 0.006 20);
   --dream-art-position: 72% 45%;
+  --dream-art-fill: 100%;
   --dream-canvas: color-mix(in oklab, oklch(0.975 0.006 35) 96%, var(--dream-accent));
   --dream-surface: color-mix(in oklab, oklch(0.988 0.004 35) 97%, var(--dream-accent));
   --dream-surface-raised: color-mix(in oklab, oklch(0.995 0.003 35) 98%, var(--dream-accent));
@@ -105,7 +106,9 @@ html.codex-dream-skin main.main-surface {
 }
 
 html.codex-dream-skin main.main-surface > header.app-header-tint {
-  position: relative;
+  position: absolute !important;
+  inset: 0 0 auto 0 !important;
+  width: auto !important;
   z-index: 20;
   color: var(--dream-text) !important;
   background: color-mix(in oklab, var(--dream-surface) 94%, transparent) !important;
@@ -206,7 +209,7 @@ html.codex-dream-skin .dream-home {
   min-height: 230px !important;
   flex: 0 1 auto !important;
   padding: 0 !important;
-  overflow: hidden !important;
+  overflow: visible !important;
   border: 1px solid var(--dream-line) !important;
   border-radius: 20px !important;
   background-image: var(--dream-art) !important;
@@ -225,6 +228,7 @@ html.codex-dream-skin.dream-art-wide .dream-home > div:first-child > div:first-c
   position: absolute;
   z-index: 0;
   inset: 0;
+  border-radius: inherit;
   pointer-events: none;
   background: linear-gradient(90deg, var(--dream-hero-shade) 0 32%, transparent 70%);
 }
@@ -388,6 +392,19 @@ html.codex-dream-skin.dream-art-wide:is(.dream-task-ambient, .dream-task-banner)
   background-attachment: fixed !important;
 }
 
+/* Very wide banners become excessively enlarged when cover is applied to a
+   taller window. Preserve their full width once cover would crop too much. */
+html.codex-dream-skin.dream-art-wide.dream-art-fit-width:has(main.main-surface.dream-home-shell) body,
+html.codex-dream-skin.dream-art-wide.dream-art-fit-width:is(.dream-task-ambient, .dream-task-banner):has(main.main-surface:not(.dream-home-shell)) body {
+  background-image:
+    linear-gradient(to bottom,
+      transparent max(0%, calc(var(--dream-art-fill) - 9%)),
+      var(--dream-canvas) var(--dream-art-fill)),
+    var(--dream-art) !important;
+  background-position: center, center top !important;
+  background-size: 100% 100%, 100% auto !important;
+}
+
 html.codex-dream-skin.dream-art-wide:has(main.main-surface.dream-home-shell)
   aside.app-shell-left-panel,
 html.codex-dream-skin.dream-art-wide:is(.dream-task-ambient, .dream-task-banner):has(main.main-surface:not(.dream-home-shell))
@@ -469,6 +486,23 @@ html.codex-dream-skin.dream-art-wide main.main-surface.dream-home-shell
 html.codex-dream-skin.dream-art-wide main.main-surface.dream-home-shell
   .dream-home > div:first-child > div:first-child > div:first-child::before {
   content: none !important;
+}
+
+/* Keep suggestions inside the semantic text-safe side instead of laying
+   translucent cards across the image subject. Native container queries then
+   reduce the rail to two cards when that safe column is narrow. */
+html.codex-dream-skin.dream-art-wide.dream-safe-left main.main-surface.dream-home-shell
+  .dream-home > div:first-child > div:first-child > div:first-child > div:nth-child(2) {
+  left: 0 !important;
+  right: auto !important;
+  width: min(42%, 500px) !important;
+}
+
+html.codex-dream-skin.dream-art-wide.dream-safe-right main.main-surface.dream-home-shell
+  .dream-home > div:first-child > div:first-child > div:first-child > div:nth-child(2) {
+  left: auto !important;
+  right: 0 !important;
+  width: min(42%, 500px) !important;
 }
 
 html.codex-dream-skin.dream-art-wide main.main-surface.dream-home-shell

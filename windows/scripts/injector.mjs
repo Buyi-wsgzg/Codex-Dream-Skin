@@ -588,13 +588,13 @@ async function removeFromSession(session) {
     document.documentElement?.classList.remove(
       'codex-dream-skin', 'dream-theme-light', 'dream-theme-dark',
       'dream-layout-adaptive', 'dream-layout-classic',
-      'dream-art-wide', 'dream-art-standard', 'dream-focus-left',
+      'dream-art-wide', 'dream-art-fit-width', 'dream-art-standard', 'dream-focus-left',
       'dream-focus-center', 'dream-focus-right', 'dream-safe-left',
       'dream-safe-center', 'dream-safe-right', 'dream-safe-none',
       'dream-task-ambient', 'dream-task-banner', 'dream-task-off'
     );
     for (const property of [
-      '--dream-art', '--dream-art-position', '--dream-focus-x', '--dream-focus-y',
+      '--dream-art', '--dream-art-position', '--dream-art-fill', '--dream-focus-x', '--dream-focus-y',
       '--dream-accent', '--dream-accent-ink', '--dream-image-luma',
       '--dream-tagline', '--dream-polaroid-caption'
     ]) document.documentElement?.style.removeProperty(property);
@@ -631,7 +631,9 @@ async function verifySession(session) {
     };
     const home = document.querySelector('.dream-home');
     const suggestions = home?.querySelector('.group\\\\/home-suggestions') ?? null;
-    const cards = suggestions ? [...suggestions.querySelectorAll('button')].map(box) : [];
+    const cards = suggestions ? [...suggestions.querySelectorAll('button')]
+      .map(box).filter((card) => card && card.width > 0 && card.height > 0) : [];
+    const hero = home?.firstElementChild?.firstElementChild?.firstElementChild ?? null;
     const state = window.__CODEX_DREAM_SKIN_STATE__;
     const chrome = document.getElementById('codex-dream-skin-chrome');
     const shell = document.querySelector('main.main-surface');
@@ -644,6 +646,8 @@ async function verifySession(session) {
       expectedVersion: ${JSON.stringify(SKIN_VERSION)},
       themeId: state?.config?.id ?? null,
       themeLayout: state?.config?.layout ?? null,
+      artAspect: state?.profile?.aspect ?? null,
+      artFitWidth: document.documentElement.classList.contains('dream-art-fit-width'),
       stylePresent: Boolean(document.getElementById('codex-dream-skin-style')),
       chromePresent: Boolean(chrome),
       chromeDisplay: getComputedStyle(chrome || document.body).display,
@@ -661,7 +665,8 @@ async function verifySession(session) {
       },
       homePresent: Boolean(home),
       suggestionsPresent: Boolean(suggestions),
-      hero: box(home?.firstElementChild?.firstElementChild?.firstElementChild),
+      hero: box(hero),
+      heroOverflow: getComputedStyle(hero || document.body).overflow,
       cards,
       composer: box(document.querySelector('.composer-surface-chrome')),
       sidebar: box(document.querySelector('aside.app-shell-left-panel')),
@@ -671,18 +676,20 @@ async function verifySession(session) {
         y: document.documentElement.scrollHeight > document.documentElement.clientHeight,
       },
     };
+    const headerFitsShell = Boolean(result.header) && Boolean(result.shell) &&
+      Math.abs(result.header.x - result.shell.x) <= 2 &&
+      result.header.width <= result.shell.width + 2 &&
+      result.header.x + result.header.width <= result.viewport.width + 2;
     const classicChromeFits = result.themeLayout !== 'classic' || (
-      Boolean(result.chrome) && Boolean(result.shell) &&
+      Boolean(result.chrome) &&
       result.chrome.width > 0 && result.chrome.height > 0 &&
       Math.abs(result.chrome.x - result.shell.x) <= 2 &&
       Math.abs(result.chrome.y - result.shell.y) <= 2 &&
       Math.abs(result.chrome.width - result.shell.width) <= 2 &&
-      Math.abs(result.chrome.height - result.shell.height) <= 2 &&
-      Boolean(result.header) &&
-      Math.abs(result.header.x - result.shell.x) <= 2 &&
-      result.header.width <= result.shell.width + 2 &&
-      result.header.x + result.header.width <= result.viewport.width + 2
+      Math.abs(result.chrome.height - result.shell.height) <= 2
     );
+    const shouldFitWidth = result.themeLayout === 'adaptive' && result.artAspect >= 1.75 &&
+      result.artAspect > (result.viewport.width / Math.max(1, result.viewport.height)) * 1.18;
     const bundledClassic = result.themeLayout === 'classic' &&
       ['arina', 'fiona'].includes(result.themeId);
     const classicHomeDecorations = !bundledClassic || !result.homePresent || (
@@ -697,9 +704,11 @@ async function verifySession(session) {
       result.stylePresent && result.chromePresent &&
       result.chromePointerEvents === 'none' && Boolean(result.composer) && Boolean(result.sidebar) &&
       (result.themeLayout !== 'classic' || result.chromeDisplay !== 'none') &&
-      classicChromeFits && classicHomeDecorations &&
+      headerFitsShell && classicChromeFits && classicHomeDecorations &&
+      result.artFitWidth === shouldFitWidth &&
       (!result.homePresent || (Boolean(result.hero) &&
-        (!result.suggestionsPresent || (result.cards.length >= 2 && result.cards.length <= 4))));
+        (!result.suggestionsPresent || (result.heroOverflow === 'visible' &&
+          result.cards.length >= 2 && result.cards.length <= 4))));
     return result;
   })()`);
 }

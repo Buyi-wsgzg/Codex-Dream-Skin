@@ -15,6 +15,8 @@
 
 ### 修复
 
+- Full Window 会按图片与当前窗口的宽高比动态评估 `cover` 裁切；超宽横幅在裁切超过阈值时改为按宽完整展示并向底色柔和过渡，窗口尺寸变化后会自动重算，避免人物被异常放大或截断。
+- Full Window 的原生标题栏不再重复偏移一个侧栏宽度；首页建议卡片不再被横幅容器裁掉，并会收进 `safeArea` 一侧，避免覆盖图片主体。
 - Switch Theme 不再把残留 `state.json` 当成仍在运行的 watcher。只有当前官方 Codex 暴露经过验证的 CDP 端点时才报告热切换并仅刷新 injector；否则明确提示主题只会在下次 Dream Skin 启动时生效。
 - 含中文菜单或测试文本的 PowerShell 脚本使用 UTF-8 BOM，避免 Windows PowerShell 5.1 按系统代码页解析后出现语法错误。
 - Windows PowerShell 5.1 原子替换已有文件时使用同目录临时回滚文件，避免空备份路径导致安装、切换或恢复失败。
