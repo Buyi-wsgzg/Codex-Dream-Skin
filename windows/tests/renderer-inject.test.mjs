@@ -22,6 +22,8 @@ function createFixture({
   computedColorScheme = "",
   osAppearance = "light",
   analysisFixture = null,
+  shellWidth = 990,
+  shellHeight = 784,
 }) {
   const nodes = new Map();
   const rootClasses = new Set(staleSkin ? ["codex-dream-skin"] : []);
@@ -86,7 +88,7 @@ function createFixture({
   const shellMain = {
     classList: makeClassList(),
     getBoundingClientRect() {
-      return { left: 290, top: 36, width: 990, height: 784 };
+      return { left: 290, top: 36, width: shellWidth, height: shellHeight };
     },
   };
   const routeClasses = new Set();
@@ -323,8 +325,20 @@ assert.equal(classicChrome.style.top, "36px");
 assert.equal(classicChrome.style.width, "990px");
 assert.equal(classicChrome.style.height, "784px");
 assert.equal(classic.rootStyles.get("--dream-tagline"), '"Classic rose"');
+assert.equal(classic.rootStyles.get("--dream-classic-scale"), "1.000");
+assert.equal(classic.rootStyles.get("--dream-classic-type-scale"), "1.000");
 assert.equal(classic.context.window.__CODEX_DREAM_SKIN_STATE__.cleanup(), true);
 assert.equal(classic.context.document.documentElement.dataset.dreamTheme, undefined);
+
+const classicFull = createFixture({
+  shellPresent: true,
+  homePresent: true,
+  shellWidth: 2287,
+  shellHeight: 1358,
+});
+vm.runInNewContext(buildPayload({ id: "arina", layout: "classic" }), classicFull.context);
+assert.equal(classicFull.rootStyles.get("--dream-classic-scale"), "1.732");
+assert.equal(classicFull.rootStyles.get("--dream-classic-type-scale"), "1.400");
 
 const analysisPixels = new Uint8ClampedArray(48 * 12 * 4);
 for (let index = 0; index < 48 * 12; index += 1) {

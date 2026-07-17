@@ -26,6 +26,8 @@
     "--dream-art",
     "--dream-art-position",
     "--dream-art-fill",
+    "--dream-classic-scale",
+    "--dream-classic-type-scale",
     "--dream-focus-x",
     "--dream-focus-y",
     "--dream-accent",
@@ -321,7 +323,7 @@
     document.getElementById(CHROME_ID)?.remove();
   };
 
-  const applyProfile = (root) => {
+  const applyProfile = (root, shellMain) => {
     const focusX = config.focusX ?? profile.focusX;
     const focusY = config.focusY ?? profile.focusY;
     const appearance = config.appearance === "auto" ? detectShellAppearance() : config.appearance;
@@ -341,6 +343,10 @@
     const viewportWidth = Number(window.innerWidth) || root.clientWidth || profile.aspect;
     const viewportHeight = Number(window.innerHeight) || root.clientHeight || 1;
     const viewportAspect = viewportWidth / Math.max(1, viewportHeight);
+    const shellBox = shellMain?.getBoundingClientRect?.();
+    const classicScale = config.layout === "classic" && shellBox
+      ? clamp(Math.min(shellBox.width / 1005, shellBox.height / 784), 1, 1.75)
+      : 1;
     root.classList.toggle("dream-art-fit-width", config.layout === "adaptive" &&
       profile.aspect >= 1.75 && profile.aspect > viewportAspect * 1.18);
     root.classList.toggle("dream-art-standard", config.layout === "adaptive" && profile.aspect < 1.75);
@@ -357,6 +363,8 @@
     root.style.setProperty("--dream-art-position", `${Math.round(focusX * 100)}% ${Math.round(focusY * 100)}%`);
     root.style.setProperty("--dream-art-fill",
       `${Math.min(100, viewportAspect / Math.max(.01, profile.aspect) * 100).toFixed(2)}%`);
+    root.style.setProperty("--dream-classic-scale", classicScale.toFixed(3));
+    root.style.setProperty("--dream-classic-type-scale", Math.min(classicScale, 1.4).toFixed(3));
     root.style.setProperty("--dream-focus-x", String(focusX));
     root.style.setProperty("--dream-focus-y", String(focusY));
     root.style.setProperty("--dream-accent", accent);
@@ -380,7 +388,7 @@
 
     root.classList.add("codex-dream-skin");
     if (root.dataset) root.dataset.dreamTheme = config.id;
-    applyProfile(root);
+    applyProfile(root, shellMain);
 
     let style = document.getElementById(STYLE_ID);
     if (!style) {

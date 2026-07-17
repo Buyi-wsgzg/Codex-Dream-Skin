@@ -594,7 +594,9 @@ async function removeFromSession(session) {
       'dream-task-ambient', 'dream-task-banner', 'dream-task-off'
     );
     for (const property of [
-      '--dream-art', '--dream-art-position', '--dream-art-fill', '--dream-focus-x', '--dream-focus-y',
+      '--dream-art', '--dream-art-position', '--dream-art-fill', '--dream-classic-scale',
+      '--dream-classic-type-scale',
+      '--dream-focus-x', '--dream-focus-y',
       '--dream-accent', '--dream-accent-ink', '--dream-image-luma',
       '--dream-tagline', '--dream-polaroid-caption'
     ]) document.documentElement?.style.removeProperty(property);
@@ -648,6 +650,8 @@ async function verifySession(session) {
       themeLayout: state?.config?.layout ?? null,
       artAspect: state?.profile?.aspect ?? null,
       artFitWidth: document.documentElement.classList.contains('dream-art-fit-width'),
+      classicScale: Number(getComputedStyle(document.documentElement)
+        .getPropertyValue('--dream-classic-scale')) || 1,
       stylePresent: Boolean(document.getElementById('codex-dream-skin-style')),
       chromePresent: Boolean(chrome),
       chromeDisplay: getComputedStyle(chrome || document.body).display,
@@ -690,6 +694,10 @@ async function verifySession(session) {
     );
     const shouldFitWidth = result.themeLayout === 'adaptive' && result.artAspect >= 1.75 &&
       result.artAspect > (result.viewport.width / Math.max(1, result.viewport.height)) * 1.18;
+    const expectedClassicScale = result.themeLayout === 'classic'
+      ? Math.min(1.75, Math.max(1, Math.min(result.shell.width / 1005, result.shell.height / 784)))
+      : 1;
+    const classicScaleMatches = Math.abs(result.classicScale - expectedClassicScale) <= .002;
     const bundledClassic = result.themeLayout === 'classic' &&
       ['arina', 'fiona'].includes(result.themeId);
     const classicHomeDecorations = !bundledClassic || !result.homePresent || (
@@ -700,11 +708,17 @@ async function verifySession(session) {
         result.polaroid.box.width > 0 && result.polaroid.box.height > 0
       ))
     );
+    const classicHomeGeometry = !bundledClassic || !result.homePresent || result.viewport.width <= 1120 || (
+      Math.abs(result.hero.height - 252 * result.classicScale) <= 3 &&
+      result.cards.every((card) => Math.abs(card.height - 126 * result.classicScale) <= 3) &&
+      result.composer.height >= 98 * result.classicScale - 3
+    );
     result.pass = result.installed && result.version === result.expectedVersion &&
       result.stylePresent && result.chromePresent &&
       result.chromePointerEvents === 'none' && Boolean(result.composer) && Boolean(result.sidebar) &&
       (result.themeLayout !== 'classic' || result.chromeDisplay !== 'none') &&
-      headerFitsShell && classicChromeFits && classicHomeDecorations &&
+      headerFitsShell && classicChromeFits && classicScaleMatches &&
+      classicHomeDecorations && classicHomeGeometry &&
       result.artFitWidth === shouldFitWidth &&
       (!result.homePresent || (Boolean(result.hero) &&
         (!result.suggestionsPresent || (result.heroOverflow === 'visible' &&

@@ -166,7 +166,8 @@ html.codex-dream-skin main.main-surface > header.app-header-tint {
   border: 7px solid rgba(255,253,253,.96);
   border-bottom-width: 20px;
   box-shadow: 0 9px 20px rgba(105,47,107,.22), 0 0 0 1px rgba(197,119,163,.26);
-  transform: rotate(-7deg);
+  transform: rotate(-7deg) scale(var(--dream-classic-scale));
+  transform-origin: right bottom;
   border-radius: 2px;
 }
 #codex-dream-skin-chrome.dream-home-shell .dream-polaroid { display: block; }
@@ -182,7 +183,8 @@ html.codex-dream-skin main.main-surface > header.app-header-tint {
   gap: 8px;
   color: #d54f9a;
   font-size: 30px;
-  transform: translateX(-50%);
+  transform: translateX(-50%) scale(var(--dream-classic-scale));
+  transform-origin: center bottom;
   filter: drop-shadow(0 4px 5px rgba(166,66,137,.26));
 }
 #codex-dream-skin-chrome.dream-home-shell .dream-ribbon { display: flex; }
@@ -194,7 +196,9 @@ html.codex-dream-skin [role="main"] {
 }
 
 html.codex-dream-skin .dream-home {
-  --thread-content-max-width: min(950px, calc(100cqw - 44px)) !important;
+  --thread-content-max-width: min(
+    calc(898px * var(--dream-classic-scale) + 32px),
+    calc(100cqw - 44px * var(--dream-classic-scale))) !important;
   overflow-x: hidden !important;
 }
 
@@ -204,8 +208,8 @@ html.codex-dream-skin .dream-home {
 }
 
 .dream-home > div:first-child > div:first-child {
-  flex: 0 0 430px !important;
-  min-height: 430px !important;
+  flex: 0 0 calc(430px * var(--dream-classic-scale)) !important;
+  min-height: calc(430px * var(--dream-classic-scale)) !important;
   align-items: flex-start !important;
   padding-bottom: 0 !important;
 }
@@ -213,14 +217,14 @@ html.codex-dream-skin .dream-home {
 .dream-home > div:first-child > div:first-child > div:first-child {
   position: relative !important;
   isolation: isolate;
-  width: calc(100% - 44px) !important;
-  max-width: none !important;
-  height: 252px !important;
-  min-height: 252px !important;
+  width: min(calc(930px * var(--dream-classic-scale)), calc(100% - 44px * var(--dream-classic-scale))) !important;
+  max-width: calc(930px * var(--dream-classic-scale)) !important;
+  height: calc(252px * var(--dream-classic-scale)) !important;
+  min-height: calc(252px * var(--dream-classic-scale)) !important;
   flex: 0 1 auto !important;
   padding: 0 !important;
-  border: 2px solid rgba(255,193,221,.90) !important;
-  border-radius: 25px !important;
+  border: calc(2px * var(--dream-classic-scale)) solid rgba(255,193,221,.90) !important;
+  border-radius: calc(25px * var(--dream-classic-scale)) !important;
   overflow: visible !important;
   background-image:
     linear-gradient(90deg, rgba(113,50,178,.06), rgba(255,129,196,.05)),
@@ -237,7 +241,7 @@ html.codex-dream-skin .dream-home {
   z-index: 0;
   inset: 0 auto 0 0;
   width: 58%;
-  border-radius: 23px 0 0 23px;
+  border-radius: calc(23px * var(--dream-classic-scale)) 0 0 calc(23px * var(--dream-classic-scale));
   pointer-events: none;
   background: linear-gradient(90deg, rgba(90,38,154,.98) 0%, rgba(112,48,170,.94) 54%, rgba(130,56,179,.66) 78%, transparent 100%);
 }
@@ -248,7 +252,7 @@ html.codex-dream-skin .dream-home {
   height: 100%;
   align-items: center !important;
   justify-content: flex-start !important;
-  padding-left: 38px;
+  padding-left: calc(38px * var(--dream-classic-scale));
 }
 
 .dream-home > div:first-child > div:first-child > div:first-child > div:first-child > div:first-child {
@@ -268,7 +272,7 @@ html.codex-dream-skin .dream-home {
   justify-content: flex-start !important;
   max-width: 100% !important;
   color: white !important;
-  font-size: clamp(20px, 2vw, 30px) !important;
+  font-size: clamp(20px, 2vw, calc(30px * var(--dream-classic-type-scale))) !important;
   line-height: 1.3 !important;
   font-weight: 750 !important;
   text-align: left !important;
@@ -280,9 +284,9 @@ html.codex-dream-skin .dream-home {
 .dream-home [data-feature="game-source"]::after {
   content: var(--dream-tagline, "");
   display: block;
-  margin-top: 13px;
+  margin-top: calc(13px * var(--dream-classic-scale));
   color: rgba(255,248,255,.94);
-  font-size: 15px;
+  font-size: calc(15px * var(--dream-classic-type-scale));
   line-height: 1.5;
   font-weight: 500;
   letter-spacing: .02em;
@@ -309,29 +313,34 @@ html.codex-dream-skin .dream-home {
 }
 
 .dream-home > div:first-child > div:first-child > div:first-child > div:nth-child(2) {
-  left: 14px !important;
-  right: 14px !important;
+  left: calc(14px * var(--dream-classic-scale)) !important;
+  right: calc(14px * var(--dream-classic-scale)) !important;
   top: 100% !important;
-  margin-top: 13px !important;
+  margin-top: calc(13px * var(--dream-classic-scale)) !important;
 }
 
 .dream-home .group\/home-suggestions {
   overflow: visible !important;
 }
 
+.dream-home .group\/home-suggestions > div > div {
+  gap: calc(12px * var(--dream-classic-scale)) !important;
+}
+
 .dream-home .group\/home-suggestions button {
   position: relative !important;
-  min-height: 126px !important;
-  padding: 14px 13px 12px !important;
+  min-height: calc(126px * var(--dream-classic-scale)) !important;
+  padding: calc(14px * var(--dream-classic-scale)) calc(13px * var(--dream-classic-scale)) calc(12px * var(--dream-classic-scale)) !important;
   align-items: stretch !important;
   justify-content: flex-start !important;
   text-align: center !important;
   border: 1px solid rgba(231,169,197,.82) !important;
-  border-radius: 23px !important;
+  border-radius: calc(23px * var(--dream-classic-scale)) !important;
   background:
     radial-gradient(circle at 50% 25%, rgba(255,255,255,.96), transparent 34%),
     linear-gradient(145deg, rgba(255,251,247,.96), rgba(255,237,246,.96)) !important;
   color: #4d2567 !important;
+  font-size: calc(14px * var(--dream-classic-type-scale)) !important;
   font-weight: 600 !important;
   line-height: 1.45 !important;
   box-shadow: 0 8px 18px rgba(120,55,119,.11), inset 0 0 0 3px rgba(255,255,255,.50) !important;
@@ -345,8 +354,8 @@ html.codex-dream-skin .dream-home {
 }
 
 .dream-home .group\/home-suggestions button > span:first-child > span:first-child {
-  width: 38px;
-  height: 38px;
+  width: calc(38px * var(--dream-classic-scale));
+  height: calc(38px * var(--dream-classic-scale));
   display: grid !important;
   place-items: center;
   margin: 0 auto;
@@ -356,8 +365,8 @@ html.codex-dream-skin .dream-home {
   box-shadow: 0 0 0 7px rgba(255,218,233,.64), 0 5px 12px rgba(142,61,152,.24);
 }
 .dream-home .group\/home-suggestions button svg {
-  width: 21px !important;
-  height: 21px !important;
+  width: calc(21px * var(--dream-classic-scale)) !important;
+  height: calc(21px * var(--dream-classic-scale)) !important;
   color: white !important;
 }
 .dream-home .group\/home-suggestions button > span:first-child {
@@ -369,8 +378,9 @@ html.codex-dream-skin .dream-home {
 }
 
 html.codex-dream-skin .composer-surface-chrome {
+  min-height: calc(98px * var(--dream-classic-scale)) !important;
   border: 2px solid rgba(228,132,188,.58) !important;
-  border-radius: 25px !important;
+  border-radius: calc(25px * var(--dream-classic-scale)) !important;
   background:
     radial-gradient(circle at 88% 22%, rgba(255,255,255,.92), transparent 24%),
     linear-gradient(145deg, rgba(255,252,253,.96), rgba(255,235,246,.94)) !important;
@@ -382,15 +392,16 @@ html.codex-dream-skin .composer-surface-chrome {
 html.codex-dream-skin .composer-surface-chrome::before {
   content: "♡";
   position: absolute;
-  left: -13px;
-  top: -13px;
+  left: calc(-13px * var(--dream-classic-scale));
+  top: calc(-13px * var(--dream-classic-scale));
   z-index: 20;
-  width: 27px;
-  height: 27px;
+  width: calc(27px * var(--dream-classic-scale));
+  height: calc(27px * var(--dream-classic-scale));
   display: grid;
   place-items: center;
   border-radius: 50%;
   color: white;
+  font-size: calc(14px * var(--dream-classic-type-scale));
   background: linear-gradient(145deg, #ff96c9, #af55df);
   box-shadow: 0 4px 12px rgba(136,53,133,.22);
 }

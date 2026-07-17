@@ -376,10 +376,18 @@ try {
   if ($arinaCss -notmatch '(?s)main\.main-surface\s*>\s*header\.app-header-tint\s*\{[^}]*position:\s*absolute\s*!important;[^}]*inset:\s*0\s+0\s+auto\s+0\s*!important') {
     throw 'Classic Arina CSS does not anchor the fixed Codex header to the main surface.'
   }
+  if (-not $arinaCss.Contains('width: min(calc(930px * var(--dream-classic-scale)), calc(100% - 44px * var(--dream-classic-scale))) !important;') -or
+    -not $arinaCss.Contains('height: calc(252px * var(--dream-classic-scale)) !important;')) {
+    throw 'Classic Arina CSS does not scale its default-window composition in Full Window.'
+  }
   $fionaTheme = Read-DreamSkinTheme -ThemeDirectory (Join-Path $themePaths.Saved 'fiona')
   $fionaCss = Read-DreamSkinUtf8File -Path $fionaTheme.CssPath
   if ($fionaCss -notmatch '(?s)main\.main-surface\s*>\s*header\.app-header-tint\s*\{[^}]*position:\s*absolute\s*!important;[^}]*inset:\s*0\s+0\s+auto\s+0\s*!important') {
     throw 'Classic Fiona CSS does not anchor the fixed Codex header to the main surface.'
+  }
+  if (-not $fionaCss.Contains('width: min(calc(930px * var(--dream-classic-scale)), calc(100% - 44px * var(--dream-classic-scale))) !important;') -or
+    -not $fionaCss.Contains('height: calc(252px * var(--dream-classic-scale)) !important;')) {
+    throw 'Classic Fiona CSS does not scale its default-window composition in Full Window.'
   }
   if ("$($fionaTheme.DesktopSettings.appearanceLightChromeTheme)" -notmatch '#B65CFF') {
     throw 'Fiona theme did not retain its independent native purple accent.'
