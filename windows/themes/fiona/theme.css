@@ -161,8 +161,8 @@ html.codex-dream-skin main.main-surface > header.app-header-tint {
   height: 150px;
   display: none;
   background-image: var(--dream-art);
-  background-size: 915% auto;
-  background-position: 100% 100%;
+  background-size: 1143% auto;
+  background-position: 95% 86%;
   border: 7px solid rgba(255,253,253,.96);
   border-bottom-width: 20px;
   box-shadow: 0 9px 20px rgba(105,47,107,.22), 0 0 0 1px rgba(197,119,163,.26);
