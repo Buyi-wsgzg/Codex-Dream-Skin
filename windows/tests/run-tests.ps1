@@ -392,6 +392,11 @@ try {
   if ("$($fionaTheme.DesktopSettings.appearanceLightChromeTheme)" -notmatch '#B65CFF') {
     throw 'Fiona theme did not retain its independent native purple accent.'
   }
+  if (-not $fionaCss.Contains('background: rgba(255,244,250,.94);') -or
+    -not $fionaCss.Contains('color: #67236f !important;') -or
+    -not $fionaCss.Contains('text-shadow: none !important;')) {
+    throw 'Fiona project-name chip does not preserve readable contrast over the purple hero.'
+  }
   $themeConfigPath = Join-Path $temporaryRoot 'theme-switch.toml'
   $themeConfigOriginal = "[desktop]`r`nappearanceTheme = `"system`"`r`nfollowUpQueueMode = `"queue`"`r`n"
   Write-DreamSkinUtf8FileAtomically -Path $themeConfigPath -Content $themeConfigOriginal
