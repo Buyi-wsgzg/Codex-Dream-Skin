@@ -75,7 +75,7 @@ CDP is powerful and unauthenticated on loopback. Prefer Restore when you are don
 ## Bundled presets
 
 A fresh install seeds one tested featured preset plus five procedural abstract
-presets into your theme library. **浪漫玫瑰 / Romantic Rose** is highlighted
+presets into your theme library. **桥本有菜 / Arina Hashimoto** is highlighted
 first here:
 
 ```bash

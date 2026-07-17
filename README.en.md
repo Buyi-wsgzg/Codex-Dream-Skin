@@ -42,9 +42,9 @@
   </sub>
 </p>
 
-## Tested featured preset
+## Tested featured preset: Arina Hashimoto
 
-“Romantic Rose / 浪漫玫瑰” has been verified on the real Codex home screen in
+“Arina Hashimoto / 桥本有菜” has been verified on the real Codex home screen in
 both light and dark appearances. The user-provided source PNG is `1672 × 941`;
 the preset's `2560 × 1440` JPEG is a standardized derived export that preserves
 the source's near-16:9 composition and does not add source detail. The sidebar,
@@ -52,12 +52,12 @@ cards, project picker, and composer
 shown below are native Codex controls.
 
 <p align="center">
-  <img src="docs/images/presets/romantic-rose-light.jpg" alt="Romantic Rose tested in light appearance" width="900"><br>
+  <img src="docs/images/presets/romantic-rose-light.jpg" alt="Arina Hashimoto theme tested in light appearance" width="900"><br>
   <sub>Light · real injected screenshot; unsent input hidden during capture (preview only)</sub>
 </p>
 
 <p align="center">
-  <img src="docs/images/presets/romantic-rose-dark.jpg" alt="Romantic Rose tested in dark appearance" width="900"><br>
+  <img src="docs/images/presets/romantic-rose-dark.jpg" alt="Arina Hashimoto theme tested in dark appearance" width="900"><br>
   <sub>Dark · real injected screenshot; unsent input hidden during capture (preview only)</sub>
 </p>
 
@@ -71,14 +71,14 @@ cd macos
 ```
 
 Windows has a persistent local theme store and system-tray controls, and seeds
-the same Romantic Rose preset. For the first repo-based setup:
+the same Arina Hashimoto preset. For the first repo-based setup:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\windows\scripts\install-dream-skin.ps1
 powershell -ExecutionPolicy Bypass -File .\windows\scripts\start-dream-skin.ps1
 ```
 
-After launch, switch directly through **已保存主题 → 浪漫玫瑰**; no cross-folder
+After launch, switch directly through **已保存主题 → 桥本有菜**; no cross-folder
 manual import is required. **更换背景图** still imports your own UI-free
 wallpaper, which can then be saved for one-click switching.
 

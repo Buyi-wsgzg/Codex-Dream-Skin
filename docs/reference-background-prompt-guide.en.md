@@ -6,9 +6,9 @@ Chinese guide: [`reference-background-prompt-guide.md`](./reference-background-p
 
 > Public prompts default to an original fictional adult. They do not name or imitate a celebrity, private individual, copyrighted character, or living artist's signature style. Use an authorized identity reference only when you hold the necessary likeness and asset rights. Generated artwork is not an official OpenAI/Codex visual or endorsement.
 
-## Current Tested Feature: Romantic Rose
+## Current Tested Feature: Arina Hashimoto
 
-- **Switchable theme:** `macos/presets/preset-romantic-rose/`; Windows seeds from `windows/assets/theme.json` plus the byte-identical `windows/assets/dream-reference.jpg`. Both installers seed Romantic Rose.
+- **Switchable theme:** `macos/presets/preset-romantic-rose/`; Windows seeds from `windows/assets/theme.json` plus the byte-identical `windows/assets/dream-reference.jpg`. Both installers seed Arina Hashimoto.
 - **User-supplied pure source:** `docs/images/presets/romantic-rose-source.png` (`1672 × 941`). The preset's `2560 × 1440` JPEG is a standardized release derivative and does not create additional source detail.
 - **Real runtime results:** `romantic-rose-light.jpg` and `romantic-rose-dark.jpg` are light/dark screenshots for preview only. They are not importable wallpapers.
 - **Relationship to earlier examples:** this is the current tested preset, not `docs/images/gallery/skin-01.jpg` and not one of the skin-01–08 concept mockups. skin-01 contributes only a related pink-rose direction and UI-copy reference.
@@ -21,7 +21,7 @@ The “effect” shown in a README is not automatically an importable wallpaper.
 
 | Type | Repository path | What it is | A complete theme? |
 |---|---|---|---|
-| **Current featured preset** | `macos/presets/preset-romantic-rose/`; Windows seeds from `windows/assets/theme.json` plus the byte-identical `dream-reference.jpg` | A cross-platform theme pack containing a UI-free wallpaper; both installers seed Romantic Rose | **Yes** |
+| **Current featured preset** | `macos/presets/preset-romantic-rose/`; Windows seeds from `windows/assets/theme.json` plus the byte-identical `dream-reference.jpg` | A cross-platform theme pack containing a UI-free wallpaper; both installers seed Arina Hashimoto | **Yes** |
 | **Bundled abstract presets** | `macos/presets/preset-{midnight-aurora,sakura-dawn,amber-dusk,forest-mist,cyber-neon}/` | Procedurally generated theme packs | **Yes** |
 | **Pure source art** | `docs/images/presets/romantic-rose-source.png` | User-supplied source wallpaper around `1672 × 941`; no `theme.json` | **No**; it can be selected as an image, but is not a complete pack |
 | **Real injected previews** | `docs/images/presets/romantic-rose-light.jpg`, `romantic-rose-dark.jpg` | Light/dark Codex screenshots containing real controls | **No** |

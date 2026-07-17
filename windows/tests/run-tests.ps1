@@ -338,15 +338,18 @@ try {
   $themePaths = Initialize-DreamSkinThemeStore -SkillRoot $Root -StateRoot $themeStateRoot
   $initialTheme = Read-DreamSkinTheme -ThemeDirectory $themePaths.Active
   if ($initialTheme.Theme.id -cne 'preset-romantic-rose' -or
+    $initialTheme.Theme.name -cne '桥本有菜' -or
     $initialTheme.Theme.appearance -cne 'auto' -or
     $initialTheme.Theme.art.safeArea -cne 'left' -or
     $initialTheme.Theme.art.taskMode -cne 'ambient' -or
     [System.IO.Path]::GetExtension($initialTheme.ImagePath) -cne '.jpg') {
-    throw 'Default Windows theme did not seed the pure Romantic Rose wallpaper contract.'
+    throw 'Default Windows theme did not seed the Arina Hashimoto wallpaper contract.'
   }
   $preseededThemes = @(Get-DreamSkinSavedThemes -StateRoot $themeStateRoot)
-  if ($preseededThemes.Count -ne 1 -or $preseededThemes[0].Id -cne 'preset-romantic-rose') {
-    throw 'Romantic Rose was not preseeded in the Windows saved-theme menu.'
+  if ($preseededThemes.Count -ne 1 -or
+    $preseededThemes[0].Id -cne 'preset-romantic-rose' -or
+    $preseededThemes[0].Name -cne '桥本有菜') {
+    throw 'Arina Hashimoto was not preseeded in the Windows saved-theme menu.'
   }
   $updatedTheme = Set-DreamSkinActiveTheme -ImagePath (Join-Path $Root 'assets\dream-reference.jpg') `
     -Theme $null -Name '测试主题' -StateRoot $themeStateRoot

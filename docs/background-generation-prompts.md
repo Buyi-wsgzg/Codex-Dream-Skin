@@ -12,7 +12,7 @@
 
 | 你要做的事 | 应看的文件 | 说明 |
 |---|---|---|
-| 直接切换当前置顶主题 | `macos/presets/preset-romantic-rose/theme.json` + `background.jpg`；Windows 对应 `windows/assets/theme.json` + `dream-reference.jpg` | 两端都播种「浪漫玫瑰」；不是 `docs/images/presets/*-light/dark` 截图 |
+| 直接切换当前置顶主题 | `macos/presets/preset-romantic-rose/theme.json` + `background.jpg`；Windows 对应 `windows/assets/theme.json` + `dream-reference.jpg` | 两端都播种「桥本有菜」；不是 `docs/images/presets/*-light/dark` 截图 |
 | 直接切换抽象主题 | `macos/presets/preset-{midnight-aurora,sakura-dawn,amber-dusk,forest-mist,cyber-neon}/` | 每个目录都应同时有 `theme.json` 和 `background.jpg` |
 | 重新生成一张纯背景 | 本文件的通用模板或 [`reference-background-prompt-guide.md`](./reference-background-prompt-guide.md) | 输出应是独立的 `2560 × 1440`、16:9 图片，不是截图 |
 | 只看效果或找风格 | `docs/images/gallery/skin-01.jpg` ～ `skin-08.jpg` | 带 UI 的概念效果图，不能改名为 `background.jpg` 后导入 |
@@ -345,7 +345,7 @@ UI, UX, app interface, software window, desktop screenshot, mockup, title bar, m
 
 ## 当前仓库已有的纯背景
 
-- 用户提供的「浪漫玫瑰」byte-identical 源图：`docs/images/presets/romantic-rose-source.png`（`1672 × 941` PNG）
+- 用户提供的「桥本有菜」byte-identical 源图：`docs/images/presets/romantic-rose-source.png`（`1672 × 941` PNG）
 - macOS 实测精选可切换背景：`macos/presets/preset-romantic-rose/background.jpg`（由上述源 PNG 派生为 `2560 × 1440` JPEG；标准化尺寸不代表增加源图细节）
 - 对应浅/暗真实截图：`docs/images/presets/romantic-rose-light.jpg`、`romantic-rose-dark.jpg`（仅预览，禁止当背景导入）
 - 红白未来城市纯背景：`docs/images/hero-banner-red-white.png`（`2168 × 725`、约 3:1，仅适合首页横幅）
