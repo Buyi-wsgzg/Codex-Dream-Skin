@@ -12,6 +12,7 @@ Assert-DreamSkinPort -Port $Port
 $SkillRoot = Split-Path -Parent $PSScriptRoot
 $StateRoot = Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'
 $paths = Initialize-DreamSkinThemeStore -SkillRoot $SkillRoot -StateRoot $StateRoot
+$ConfigPath = Join-Path $HOME '.codex\config.toml'
 $powershell = (Get-Command powershell.exe -ErrorAction Stop).Source
 $startScript = Join-Path $PSScriptRoot 'start-dream-skin.ps1'
 $restoreScript = Join-Path $PSScriptRoot 'restore-dream-skin.ps1'
@@ -97,7 +98,10 @@ try {
       $dialog.Multiselect = $false
       try {
         if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-          $null = Set-DreamSkinActiveTheme -ImagePath $dialog.FileName -Theme $null -StateRoot $StateRoot
+          $current = Read-DreamSkinTheme -ThemeDirectory $paths.Active
+          $theme = $current.Theme | ConvertTo-Json -Depth 8 | ConvertFrom-Json
+          $null = Set-DreamSkinActiveTheme -ImagePath $dialog.FileName -CssPath $current.CssPath `
+            -Theme $theme -StateRoot $StateRoot
           Set-DreamSkinPaused -Paused $false -StateRoot $StateRoot | Out-Null
           $notify.ShowBalloonTip(1800, 'Codex Dream Skin', '背景图已更新。', [System.Windows.Forms.ToolTipIcon]::Info)
         }
@@ -124,7 +128,8 @@ try {
         $savedPath = $saved.Path
         $savedName = $saved.Name
         $savedAction = {
-          $null = Use-DreamSkinSavedTheme -ThemeDirectory $savedPath -StateRoot $StateRoot
+          $null = Use-DreamSkinSavedThemeWithConfig -ThemeDirectory $savedPath `
+            -ConfigPath $ConfigPath -StateRoot $StateRoot
           Set-DreamSkinPaused -Paused $false -StateRoot $StateRoot | Out-Null
           $notify.ShowBalloonTip(1800, 'Codex Dream Skin', "已应用：$savedName", [System.Windows.Forms.ToolTipIcon]::Info)
         }.GetNewClosure()

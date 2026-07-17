@@ -310,6 +310,56 @@ function Test-DreamSkinLegacyManagedLightTrio {
   )
 }
 
+function Get-DreamSkinDefaultDesktopSettings {
+  return [ordered]@{
+    appearanceLightCodeThemeId = '"codex"'
+    appearanceLightChromeTheme = '{ accent = "#B65CFF", contrast = 64, fonts = { code = "Cascadia Code", ui = "Microsoft YaHei UI" }, ink = "#4A235F", opaqueWindows = true, semanticColors = { diffAdded = "#BCE8CF", diffRemoved = "#F7B8CE", skill = "#C47BFF" }, surface = "#FFF4FA" }'
+  }
+}
+
+function Assert-DreamSkinDesktopSettings {
+  param([Parameter(Mandatory = $true)][System.Collections.IDictionary]$Settings)
+  $allowed = @('appearanceLightCodeThemeId', 'appearanceLightChromeTheme')
+  foreach ($key in $Settings.Keys) {
+    if ("$key" -cnotin $allowed) { throw "Unsupported Dream Skin desktop setting: $key" }
+    $value = "$($Settings[$key])"
+    if (-not $value -or $value.Length -gt 4096 -or $value -match '[\r\n]') {
+      throw "Invalid Dream Skin desktop setting value: $key"
+    }
+  }
+  foreach ($key in $allowed) {
+    if (-not $Settings.Contains($key)) { throw "Missing Dream Skin desktop setting: $key" }
+  }
+  if ("$($Settings.appearanceLightCodeThemeId)" -cnotmatch '^"[A-Za-z0-9._-]{1,100}"$') {
+    throw 'appearanceLightCodeThemeId must be a simple single-line TOML string.'
+  }
+  if ("$($Settings.appearanceLightChromeTheme)" -cnotmatch '^\{.*\}$') {
+    throw 'appearanceLightChromeTheme must be a single-line TOML inline table.'
+  }
+}
+
+function Set-DreamSkinDesktopSettingsInContent {
+  param(
+    [Parameter(Mandatory = $true)][AllowEmptyString()][string]$Content,
+    [Parameter(Mandatory = $true)][System.Collections.IDictionary]$Settings
+  )
+  Assert-DreamSkinDesktopSettings -Settings $Settings
+  Assert-DreamSkinDesktopShapeSupported -Content $Content
+  $newLine = Get-DreamSkinNewLine -Content $Content
+  $desktop = Get-DreamSkinDesktopSection -Content $Content
+  if ($null -eq $desktop) {
+    $Content = Add-DreamSkinDesktopSection -Content $Content -NewLine $newLine
+    $desktop = Get-DreamSkinDesktopSection -Content $Content
+  }
+  $body = $desktop.Body
+  foreach ($key in @('appearanceLightCodeThemeId', 'appearanceLightChromeTheme')) {
+    $line = "$key = $($Settings[$key])"
+    $body = Set-DreamSkinSectionSetting -Body $body -Key $key -Line $line -NewLine $newLine
+  }
+  return $Content.Substring(0, $desktop.BodyStart) + $body +
+    $Content.Substring($desktop.BodyStart + $desktop.BodyLength)
+}
+
 function Get-DreamSkinAppearanceMarkerPath {
   param([Parameter(Mandatory = $true)][string]$BackupPath)
   return "$BackupPath.appearance.json"
@@ -352,7 +402,9 @@ function Install-DreamSkinBaseTheme {
     [string]$ConfigPath,
 
     [Parameter(Mandatory = $true)]
-    [string]$BackupPath
+    [string]$BackupPath,
+
+    [System.Collections.IDictionary]$DesktopSettings = (Get-DreamSkinDefaultDesktopSettings)
   )
 
   if (-not (Test-Path -LiteralPath $ConfigPath)) { throw "Codex config not found: $ConfigPath" }
@@ -392,12 +444,10 @@ function Install-DreamSkinBaseTheme {
       } else { $null }
       $body = Set-DreamSkinSectionSetting -Body $body -Key 'appearanceTheme' -Line $savedAppearance -NewLine $newLine
     }
-    $settings = [ordered]@{
-      appearanceLightCodeThemeId = $script:DreamSkinManagedLightCodeTheme
-      appearanceLightChromeTheme = $script:DreamSkinManagedLightChromeTheme
-    }
-    foreach ($key in $settings.Keys) {
-      $body = Set-DreamSkinSectionSetting -Body $body -Key $key -Line $settings[$key] -NewLine $newLine
+    Assert-DreamSkinDesktopSettings -Settings $DesktopSettings
+    foreach ($key in @('appearanceLightCodeThemeId', 'appearanceLightChromeTheme')) {
+      $line = "$key = $($DesktopSettings[$key])"
+      $body = Set-DreamSkinSectionSetting -Body $body -Key $key -Line $line -NewLine $newLine
     }
 
     $content = $content.Substring(0, $desktop.BodyStart) + $body +
@@ -411,6 +461,23 @@ function Install-DreamSkinBaseTheme {
     }
     throw
   }
+}
+
+function Set-DreamSkinDesktopTheme {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory = $true)][string]$ConfigPath,
+    [Parameter(Mandatory = $true)][System.Collections.IDictionary]$DesktopSettings
+  )
+  if (-not (Test-Path -LiteralPath $ConfigPath -PathType Leaf)) {
+    throw "Codex config not found: $ConfigPath"
+  }
+  $originalBytes = [System.IO.File]::ReadAllBytes($ConfigPath)
+  $content = ConvertFrom-DreamSkinUtf8Bytes -Bytes $originalBytes -Path $ConfigPath
+  $updated = Set-DreamSkinDesktopSettingsInContent -Content $content -Settings $DesktopSettings
+  if ($updated -ceq $content) { return $false }
+  Write-DreamSkinUtf8FileAtomically -Path $ConfigPath -Content $updated -ExpectedBytes $originalBytes
+  return $true
 }
 
 function Restore-DreamSkinBaseTheme {

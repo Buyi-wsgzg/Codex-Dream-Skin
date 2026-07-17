@@ -41,7 +41,7 @@
 | 一键恢复 | ✅ | ✅ |
 | 实机 verify / 截图 | ✅ | ✅ |
 | 用户选图定制 | ✅ | ✅（系统托盘「更换背景图」） |
-| 本地主题保存 / 切换 | ✅（菜单栏） | ✅（系统托盘） |
+| 本地主题保存 / 切换 | ✅（菜单栏） | ✅（系统托盘 / Switch Theme 快捷方式） |
 | 官方签名校验 | ✅ | Store 签名类型 + 包身份 |
 | 客户部署提示词 | ✅ | ❌（可用 Mac 文案改写） |
 | 打客户 ZIP | ✅ `build-client-release.sh` | 手动压缩 `windows/` |
@@ -72,7 +72,7 @@
 ### 平台差异
 
 - macOS 的选图脚本会把这些字段写入主题库，可通过 `--appearance`、`--focus-x`、`--focus-y`、`--safe-area`、`--task-mode` 设置。
-- Windows 安装会初始化 `%LOCALAPPDATA%\CodexDreamSkin\active-theme`、`themes` 与 `images`，并把「桥本有菜」同时设为首次默认和可切换的已保存主题。系统托盘支持更换背景、保存当前主题、从「已保存主题」切换、暂停和恢复；图片与 `theme.json` 保存在主题仓库中，不写进 Codex 的 `config.toml`。安装会保留用户已有的 `appearanceTheme`；仅在识别到旧版精确托管的浅色三元组时按备份迁移。
+- Windows 安装会初始化 `%LOCALAPPDATA%\CodexDreamSkin\active-theme`、`themes` 与 `images`，并预置「桥本有菜 · 玫瑰粉」和「薛凯琪 · 梦幻紫」两套独立主题包。每套主题可携带自己的图片、完整 CSS、文案和浅色原生强调色；`layout: classic` 使用旧版定制布局，`layout: adaptive` 继续使用上游自适应布局。系统托盘和 `Codex Dream Skin - Switch Theme` 快捷方式都能热切换，运行中的 watcher 无需重启 Codex。主题库只会原子更新 `[desktop]` 内允许的 light code/chrome 两项，不会强制修改用户的 `appearanceTheme`。
 - Windows 渲染器仍支持在注入前用 `window.__CODEX_DREAM_SKIN_CONFIG__` 提供内存级可选覆盖（形状同上，颜色覆盖使用 `palette.accent`），但普通用户应优先使用持久化主题仓库与托盘。
 
 ## 预设与图片类型
@@ -80,7 +80,7 @@
 - `macos/presets/preset-romantic-rose/` 是置顶的实测精选主题「桥本有菜 / Arina Hashimoto」。macOS 安装后用 `switch-theme-macos.sh --id preset-romantic-rose` 切换。
 - 该 preset pack 中只有 `background.jpg`（`2560 × 1440`、16:9、纯背景）和 `theme.json` 会被播种；它由用户提供的 `1672 × 941` 源 PNG 标准化导出，不代表增加了源图细节。Byte-identical 源图归档在 `docs/images/presets/romantic-rose-source.png`，不会随 preset 播种；`romantic-rose-light.jpg` 与 `romantic-rose-dark.jpg` 是 `2308 × 1572` Retina 浅/暗真实首页截图，未发送输入仅在截图时用临时本地样式遮蔽，只作效果预览，绝不能当背景导入。
 - `preset-midnight-aurora` 等五套是程序化生成的抽象示例，与用户提供的 AI 生成「桥本有菜」精选图来源不同。精选图不代表 OpenAI/Codex 官方视觉或背书，公开再分发前需确认人物与素材权利。
-- Windows 自带与 macOS byte-identical 的 `windows/assets/dream-reference.jpg` 纯背景，并在首次初始化时播种「桥本有菜」；可直接从「已保存主题 → 桥本有菜」切换。README 实机截图仍只作预览，绝不能作为背景导入。
+- Windows 的旧版定制视觉保存在 `windows/themes/arina/` 与 `windows/themes/fiona/`；首次初始化默认启用 Arina，并把两套主题都播种到「已保存主题」。`windows/assets/dream-reference.jpg` 仍作为上游自适应背景素材保留。README 实机截图和 `docs/images/gallery/` 合成图仍只作预览，绝不能作为背景导入。
 - Windows 导入和 macOS 快速加载入口会拒绝空文件或超过 16 MB 的输入；macOS 主定制入口可接收最高 50 MB 的源图，但转换后的主题文件必须不超过 16 MB。两端 payload 构建还会拒绝任一边超过 16384px 或总像素超过 50MP 的声明尺寸；Windows 在复制导入图前复用 Node 元数据解析器执行同一限制。Windows 注入器用图片与主题内容的 SHA-256 修订值识别热更新，并在构建首帧 payload 前同步读取图片比例。
 - 自定义生图优先使用 `2560 × 1440`（16:9）：左侧约 50%～58% 保持低信息、低对比，主体放在右侧约 58%～88%。输出必须是连续铺满画布的纯背景，禁止窗口、侧栏、卡片、输入框、文字、Logo 和水印。
 - 可直接复制的无人物、右侧成年人物与参考图编辑模板见 `docs/reference-background-prompt-guide.md`；公共默认提示词不指定真人或名人。

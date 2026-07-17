@@ -35,10 +35,12 @@ try {
     (Get-DreamSkinCodexProcesses -Codex $savedPathCandidate).Count -gt 0) {
     throw 'The saved Codex path is still running but no longer matches a registered Store package. Close it manually before installing.'
   }
-  $null = Initialize-DreamSkinThemeStore -SkillRoot $SkillRoot -StateRoot $StateRoot
+  $themePaths = Initialize-DreamSkinThemeStore -SkillRoot $SkillRoot -StateRoot $StateRoot
+  $activeTheme = Read-DreamSkinTheme -ThemeDirectory $themePaths.Active
   $ConfigPath = Join-Path $HOME '.codex\config.toml'
   $BackupPath = Join-Path $StateRoot 'config.before-dream-skin.toml'
-  Install-DreamSkinBaseTheme -ConfigPath $ConfigPath -BackupPath $BackupPath
+  Install-DreamSkinBaseTheme -ConfigPath $ConfigPath -BackupPath $BackupPath `
+    -DesktopSettings $activeTheme.DesktopSettings
 
   if (-not $NoShortcuts) {
     $shell = New-Object -ComObject WScript.Shell
@@ -48,6 +50,7 @@ try {
     $startScript = Join-Path $PSScriptRoot 'start-dream-skin.ps1'
     $restoreScript = Join-Path $PSScriptRoot 'restore-dream-skin.ps1'
     $trayScript = Join-Path $PSScriptRoot 'tray-dream-skin.ps1'
+    $switchScript = Join-Path $PSScriptRoot 'switch-theme.ps1'
     $portArgument = if ($PortExplicit) { " -Port $Port" } else { '' }
 
     foreach ($folder in @($desktop, $startMenu)) {
@@ -57,6 +60,13 @@ try {
       $shortcut.WorkingDirectory = $SkillRoot
       $shortcut.Description = 'Launch the official Codex app with Codex Dream Skin'
       $shortcut.Save()
+
+      $switch = $shell.CreateShortcut((Join-Path $folder 'Codex Dream Skin - Switch Theme.lnk'))
+      $switch.TargetPath = $powershell
+      $switch.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$switchScript`"$portArgument"
+      $switch.WorkingDirectory = $SkillRoot
+      $switch.Description = 'Hot-switch between bundled Codex Dream Skin themes'
+      $switch.Save()
     }
 
     $restore = $shell.CreateShortcut((Join-Path $desktop 'Codex Dream Skin - Restore.lnk'))

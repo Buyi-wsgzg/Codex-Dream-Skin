@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "fiona",
+  "name": "薛凯琪 · 梦幻紫",
+  "version": "1.0.0",
+  "image": "theme.png",
+  "css": "theme.css",
+  "appearance": "light",
+  "layout": "classic",
+  "art": {
+    "focusX": 0.72,
+    "focusY": 0.45,
+    "safeArea": "left",
+    "taskMode": "off"
+  },
+  "palette": {
+    "accent": "#B65CFF"
+  },
+  "desktopSettings": {
+    "appearanceLightCodeThemeId": "\"codex\"",
+    "appearanceLightChromeTheme": "{ accent = \"#B65CFF\", contrast = 64, fonts = { code = \"Cascadia Code\", ui = \"Microsoft YaHei UI\" }, ink = \"#4A235F\", opaqueWindows = true, semanticColors = { diffAdded = \"#BCE8CF\", diffRemoved = \"#F7B8CE\", skill = \"#C47BFF\" }, surface = \"#FFF4FA\" }"
+  },
+  "copy": {
+    "brandIcon": "♫",
+    "brandTitle": "薛凯琪专属定制皮肤",
+    "brandSubtitle": "Codex App 限定版 ✦",
+    "signature": "Fiona Sit ♡",
+    "tagline": "与凯琪一起，把灵感写进每一天 ♡",
+    "polaroidCaption": "Stay Sweet, Fiona ♡"
+  }
+}

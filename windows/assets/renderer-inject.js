@@ -6,6 +6,8 @@
     "codex-dream-skin",
     "dream-theme-light",
     "dream-theme-dark",
+    "dream-layout-adaptive",
+    "dream-layout-classic",
     "dream-art-wide",
     "dream-art-standard",
     "dream-focus-left",
@@ -27,6 +29,8 @@
     "--dream-accent",
     "--dream-accent-ink",
     "--dream-image-luma",
+    "--dream-tagline",
+    "--dream-polaroid-caption",
   ];
   const HOME_UTILITY_CLASS = "dream-home-utility";
   const installToken = {};
@@ -73,9 +77,27 @@
     const taskMode = ["auto", "ambient", "banner", "off"].includes(art.taskMode)
       ? art.taskMode
       : "auto";
+    const layout = ["adaptive", "classic"].includes(config.layout)
+      ? config.layout
+      : "adaptive";
+    const copy = config.copy && typeof config.copy === "object" ? config.copy : {};
+    const shortText = (candidate, fallback = "", maxLength = 160) =>
+      typeof candidate === "string" && candidate.length <= maxLength ? candidate : fallback;
     const metadataRatio = Number(config?.artMetadata?.ratio);
     return {
       appearance,
+      layout,
+      id: shortText(config.id, "custom", 80),
+      name: shortText(config.name, "Codex Dream Skin", 120),
+      version: shortText(config.version, "1", 40),
+      copy: {
+        brandIcon: shortText(copy.brandIcon, "✦", 16),
+        brandTitle: shortText(copy.brandTitle, "Codex Dream Skin", 120),
+        brandSubtitle: shortText(copy.brandSubtitle, "Codex App", 120),
+        signature: shortText(copy.signature, "", 120),
+        tagline: shortText(copy.tagline, "", 160),
+        polaroidCaption: shortText(copy.polaroidCaption, "", 160),
+      },
       safeArea,
       taskMode,
       focusX: hasNumber(art.focusX) ? clamp(art.focusX) : null,
@@ -99,6 +121,14 @@
     return URL.createObjectURL(new Blob([bytes], { type: mime }));
   })();
   const config = normalizeConfig(rawConfig);
+  const payloadVersion = `4:${config.id}:${config.version}:${config.layout}`;
+  const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[character]);
   let profile = {
     ...defaultProfile,
     aspect: config.initialAspect ?? defaultProfile.aspect,
@@ -106,7 +136,7 @@
   const existingStyle = document.getElementById(STYLE_ID);
   if (existingStyle) {
     existingStyle.textContent = cssText;
-    existingStyle.dataset.dreamVersion = "3";
+    existingStyle.dataset.dreamVersion = payloadVersion;
   }
 
   const analyzeArt = () => new Promise((resolve) => {
@@ -278,6 +308,7 @@
   const clearSkinDom = () => {
     const root = document.documentElement;
     root?.classList.remove(...ROOT_CLASSES);
+    if (root?.dataset?.dreamTheme) delete root.dataset.dreamTheme;
     for (const property of ROOT_PROPERTIES) root?.style.removeProperty(property);
     document.querySelectorAll(".dream-home").forEach((node) => node.classList.remove("dream-home"));
     document.querySelectorAll(".dream-task").forEach((node) => node.classList.remove("dream-task"));
@@ -294,15 +325,17 @@
     const focus = focusX < .4 ? "left" : focusX > .6 ? "right" : "center";
     const safeArea = config.safeArea === "auto" ? (profile.safeArea ||
       (focus === "left" ? "right" : focus === "right" ? "left" : "center")) : config.safeArea;
-    const taskMode = config.taskMode === "auto"
+    const taskMode = config.layout === "classic" ? "off" : config.taskMode === "auto"
       ? profile.aspect >= 2.25 ? "banner" : "ambient"
       : config.taskMode;
     const accent = config.accent || `rgb(${profile.accent.join(" ")})`;
     const accentInk = luminance(...profile.accent) > .42 ? "rgb(26 24 28)" : "rgb(250 248 251)";
     root.classList.toggle("dream-theme-light", appearance === "light");
     root.classList.toggle("dream-theme-dark", appearance === "dark");
-    root.classList.toggle("dream-art-wide", profile.aspect >= 1.75);
-    root.classList.toggle("dream-art-standard", profile.aspect < 1.75);
+    root.classList.toggle("dream-layout-adaptive", config.layout === "adaptive");
+    root.classList.toggle("dream-layout-classic", config.layout === "classic");
+    root.classList.toggle("dream-art-wide", config.layout === "adaptive" && profile.aspect >= 1.75);
+    root.classList.toggle("dream-art-standard", config.layout === "adaptive" && profile.aspect < 1.75);
     for (const value of ["left", "center", "right"]) {
       root.classList.toggle(`dream-focus-${value}`, focus === value);
     }
@@ -319,6 +352,8 @@
     root.style.setProperty("--dream-accent", accent);
     root.style.setProperty("--dream-accent-ink", accentInk);
     root.style.setProperty("--dream-image-luma", profile.luma.toFixed(3));
+    root.style.setProperty("--dream-tagline", JSON.stringify(config.copy.tagline));
+    root.style.setProperty("--dream-polaroid-caption", JSON.stringify(config.copy.polaroidCaption));
   };
 
   const ensure = () => {
@@ -334,6 +369,7 @@
     }
 
     root.classList.add("codex-dream-skin");
+    if (root.dataset) root.dataset.dreamTheme = config.id;
     applyProfile(root);
 
     let style = document.getElementById(STYLE_ID);
@@ -342,9 +378,9 @@
       style.id = STYLE_ID;
       (document.head || root).appendChild(style);
     }
-    if (style.dataset.dreamVersion !== "3") {
+    if (style.dataset.dreamVersion !== payloadVersion) {
       style.textContent = cssText;
-      style.dataset.dreamVersion = "3";
+      style.dataset.dreamVersion = payloadVersion;
     }
 
     const home = document.querySelector('[role="main"]:has([data-testid="home-icon"])');
@@ -352,7 +388,8 @@
       candidate.classList.toggle("dream-home", candidate === home);
       candidate.classList.toggle("dream-task", candidate !== home);
     }
-    const utilityBars = new Set(home ? home.querySelectorAll('[class*="_homeUtilityBar_"]') : []);
+    const utilityBars = new Set(config.layout === "adaptive" && home
+      ? home.querySelectorAll('[class*="_homeUtilityBar_"]') : []);
     for (const candidate of document.querySelectorAll(`.${HOME_UTILITY_CLASS}`)) {
       if (!utilityBars.has(candidate)) candidate.classList.remove(HOME_UTILITY_CLASS);
     }
@@ -367,6 +404,20 @@
       chrome.setAttribute("aria-hidden", "true");
       document.body.appendChild(chrome);
     }
+    if (chrome.dataset.dreamVersion !== payloadVersion) {
+      chrome.innerHTML = config.layout === "classic" ? `
+        <div class="dream-brand"><span class="dream-note">${escapeHtml(config.copy.brandIcon)}</span><span><b>${escapeHtml(config.copy.brandTitle)}</b><small>${escapeHtml(config.copy.brandSubtitle)}</small></span></div>
+        <div class="dream-signature">${escapeHtml(config.copy.signature)}</div>
+        <div class="dream-sparkles"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dream-ribbon"><span>♡</span>🎀<span>✦</span></div>
+        <div class="dream-polaroid"></div>` : "";
+      chrome.dataset.dreamVersion = payloadVersion;
+    }
+    const shellBox = shellMain.getBoundingClientRect();
+    chrome.style.left = `${Math.round(shellBox.left)}px`;
+    chrome.style.top = `${Math.round(shellBox.top)}px`;
+    chrome.style.width = `${Math.round(shellBox.width)}px`;
+    chrome.style.height = `${Math.round(shellBox.height)}px`;
     chrome.classList.toggle("dream-home-shell", Boolean(home));
   };
 
@@ -403,7 +454,7 @@
   });
   const timer = setInterval(ensure, 5000);
   window[STATE_KEY] = {
-    ensure, cleanup, observer, timer, scheduler, artUrl, profile, config, installToken, version: "1.2.0",
+    ensure, cleanup, observer, timer, scheduler, artUrl, profile, config, installToken, version: "1.3.0",
   };
   ensure();
   analyzeArt().then((result) => {
@@ -413,5 +464,11 @@
     state.profile = result;
     ensure();
   });
-  return { installed: true, version: "1.2.0", adaptive: true };
+  return {
+    installed: true,
+    version: "1.3.0",
+    adaptive: config.layout === "adaptive",
+    themeId: config.id,
+    themeName: config.name,
+  };
 })(__DREAM_CSS_JSON__, __DREAM_ART_JSON__, __DREAM_THEME_JSON__)

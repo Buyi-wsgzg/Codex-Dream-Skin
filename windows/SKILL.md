@@ -9,7 +9,7 @@ Apply a reversible renderer skin through Chromium DevTools Protocol while launch
 
 ## Workflow
 
-1. Install Node.js 22 or newer, close Codex, then run `scripts/install-dream-skin.ps1` once to preserve the user's native appearance settings, seed the Arina Hashimoto theme, and create launch/restore/tray shortcuts.
+1. Install Node.js 22 or newer, close Codex, then run `scripts/install-dream-skin.ps1` once to preserve the user's native appearance settings, seed the Arina and Fiona classic theme packs, and create launch/restore/switch/tray shortcuts.
 2. Run `scripts/start-dream-skin.ps1`. The shortcut asks before restarting an already-open Codex app; CLI callers must explicitly add `-RestartExisting`.
 3. Run `scripts/verify-dream-skin.ps1 -ScreenshotPath <absolute-path>` after launch. Treat a missing continuous wallpaper, home shell, native composer, sidebar layer, or injection marker as failure. The native suggestion count is responsive and may be two to four.
 4. Inspect the screenshot against `references/qa-inventory.md`. Verify both the home screen and a normal task before signing off.
@@ -28,6 +28,7 @@ Apply a reversible renderer skin through Chromium DevTools Protocol while launch
 - Keep the injection daemon running for navigation/reload resilience. Its state and logs live under `%LOCALAPPDATA%\CodexDreamSkin`.
 - The watcher registers a generation-checked early payload for connected renderers so reload/navigation can paint the skin before the normal load-event fallback; unsupported CDP targets fall back safely.
 - The active theme, saved themes, imported images, pause marker, and tray controls live under `%LOCALAPPDATA%\CodexDreamSkin`. Reject empty or over-16 MB images before copying or encoding them.
+- Bundled packs may add a strict-UTF-8 stylesheet up to 512 KiB. Keep it inside the pack, preserve the shared adaptive CSS as the base, and use `layout: classic` only for a complete per-theme override.
 - Every managed-store write rejects junctions and other reparse points in every existing path component. Imports also use the bundled Node metadata parser before copying to reject dimensions above 16384px or 50MP.
 - CDP targets must use a same-port loopback WebSocket, belong to the current Store package, retain the launch-time Browser ID, and expose expected Codex renderer markers.
 - Loopback prevents LAN exposure, but Chromium CDP has no same-user authentication. Run only trusted local software while the skin is active, and use restore to close the debug session when it is no longer needed.
@@ -49,9 +50,11 @@ node --check assets\renderer-inject.js
 - `scripts/config-utf8.ps1`: atomic UTF-8 configuration backup, selective restore, and explicit recovery.
 - `assets/dream-skin.css`: full visual layer.
 - `assets/renderer-inject.js`: idempotent DOM integration and cleanup.
-- `assets/dream-reference.jpg`: pure 2560 × 1440 Arina Hashimoto wallpaper seeded as the default and as a saved theme; it contains no Codex UI.
-- `assets/theme.json`: shared adaptive theme contract for the seeded preset.
-- `scripts/theme-windows.ps1`: persistent active/saved theme store, safe image import, pause state, and preset seeding.
+- `assets/dream-reference.jpg`: upstream adaptive 2560 × 1440 wallpaper retained as a shared base asset; it contains no Codex UI.
+- `assets/theme.json`: shared adaptive theme contract.
+- `themes/arina` and `themes/fiona`: bundled classic packs with independent image, CSS, copy, and allowlisted native colors.
+- `scripts/theme-windows.ps1`: persistent active/saved theme store, safe image/CSS handling, pause state, and bundled pack seeding.
+- `scripts/switch-theme.ps1`: non-restarting interactive/id-based switcher; a running watcher hot-applies the selected pack.
 - `scripts/tray-dream-skin.ps1`: Windows Forms tray for apply, pause, import, save, switch, and complete restore.
 - `references/qa-inventory.md`: required functional and visual signoff coverage.
 - `references/runtime-notes.md`: troubleshooting and update behavior.

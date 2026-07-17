@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "arina",
+  "name": "桥本有菜 · 玫瑰粉",
+  "version": "1.0.0",
+  "image": "theme.png",
+  "css": "theme.css",
+  "appearance": "light",
+  "layout": "classic",
+  "art": {
+    "focusX": 0.72,
+    "focusY": 0.45,
+    "safeArea": "left",
+    "taskMode": "off"
+  },
+  "palette": {
+    "accent": "#C96F82"
+  },
+  "desktopSettings": {
+    "appearanceLightCodeThemeId": "\"codex\"",
+    "appearanceLightChromeTheme": "{ accent = \"#C96F82\", contrast = 64, fonts = { code = \"Cascadia Code\", ui = \"Microsoft YaHei UI\" }, ink = \"#4B252D\", opaqueWindows = true, semanticColors = { diffAdded = \"#BCE8CF\", diffRemoved = \"#F3B7C1\", skill = \"#D98697\" }, surface = \"#FFF8F6\" }"
+  },
+  "copy": {
+    "brandIcon": "🌹",
+    "brandTitle": "桥本有菜专属定制皮肤",
+    "brandSubtitle": "Codex App 限定版 ✦",
+    "signature": "Arina Hashimoto ♡",
+    "tagline": "与有菜一起，用灵感创造无限可能 ✦",
+    "polaroidCaption": "一直陪你 · 把灵感做成作品 ♡"
+  }
+}

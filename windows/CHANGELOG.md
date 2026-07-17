@@ -2,8 +2,20 @@
 
 ## Unreleased
 
+### 新增
+
+- 在上游受管主题仓库和热更新 watcher 上恢复两套独立经典主题包：`arina`（桥本有菜 · 玫瑰粉）与 `fiona`（薛凯琪 · 梦幻紫）。每套主题携带自己的图片、完整 CSS、文案、布局元数据和原生浅色强调色。
+- 主题清单新增 `layout: adaptive | classic` 与可选 `css`；classic 模式恢复品牌、签名、飘带、拍立得等旧版装饰 DOM，同时保留当前上游的辅助窗口隔离、Browser ID 校验和早期注入。
+- 恢复 `Codex Dream Skin - Switch Theme` 桌面/开始菜单入口。运行中的 watcher 会原子切换活动主题并热应用，无需重启 Codex；未运行时则为下次启动预选主题。
+
+### 改进
+
+- 主题切换只原子更新 `[desktop]` 中允许的 light code/chrome 两项并保留用户的 `appearanceTheme`；Arina 与 Fiona 使用相互独立的玫瑰粉/梦幻紫原生配色。
+- 受管主题仓库会校验可选 CSS 的相对路径、reparse point、严格 UTF-8 和 512 KiB 上限，并把 CSS 纳入 watcher 的修订指纹与热更新检测。
+
 ### 修复
 
+- Switch Theme 不再把残留 `state.json` 当成仍在运行的 watcher。只有当前官方 Codex 暴露经过验证的 CDP 端点时才报告热切换并仅刷新 injector；否则明确提示主题只会在下次 Dream Skin 启动时生效。
 - 含中文菜单或测试文本的 PowerShell 脚本使用 UTF-8 BOM，避免 Windows PowerShell 5.1 按系统代码页解析后出现语法错误。
 - Windows PowerShell 5.1 原子替换已有文件时使用同目录临时回滚文件，避免空备份路径导致安装、切换或恢复失败。
 - CRLF 配置中的多行数组会在写入前正确拒绝；恢复原本不存在的外观键时不再因空字符串绑定留下额外空行。

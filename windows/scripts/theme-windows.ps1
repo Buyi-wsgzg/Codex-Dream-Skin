@@ -3,6 +3,7 @@
 }
 
 $script:DreamSkinMaxImageBytes = 16 * 1024 * 1024
+$script:DreamSkinMaxCssBytes = 512 * 1024
 
 function Assert-DreamSkinNoReparseComponents {
   param([Parameter(Mandatory = $true)][string]$Path)
@@ -89,6 +90,23 @@ function Assert-DreamSkinImageFile {
   }
 }
 
+function Assert-DreamSkinCssFile {
+  param([Parameter(Mandatory = $true)][string]$Path)
+  $fullPath = [System.IO.Path]::GetFullPath($Path)
+  if (-not (Test-Path -LiteralPath $fullPath -PathType Leaf)) {
+    throw "Theme CSS does not exist: $fullPath"
+  }
+  if ([System.IO.Path]::GetExtension($fullPath) -cne '.css') {
+    throw 'Theme stylesheet must use the .css extension.'
+  }
+  $length = (Get-Item -LiteralPath $fullPath -Force).Length
+  if ($length -lt 1) { throw 'Theme stylesheet cannot be empty.' }
+  if ($length -gt $script:DreamSkinMaxCssBytes) {
+    throw 'Theme stylesheet exceeds the 512 KB limit.'
+  }
+  $null = Read-DreamSkinUtf8File -Path $fullPath
+}
+
 function Get-DreamSkinThemePaths {
   param([string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'))
   $fullRoot = [System.IO.Path]::GetFullPath($StateRoot)
@@ -153,6 +171,9 @@ function Read-DreamSkinTheme {
   if ($null -eq $theme -or $theme -is [string] -or $theme -is [array] -or -not $theme.image) {
     throw "Theme metadata must be an object with a relative image path: $themePath"
   }
+  if (-not $theme.id -or "$($theme.id)" -cnotmatch '^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$') {
+    throw "Theme id must be a safe 1-80 character identifier: $themePath"
+  }
   $image = "$($theme.image)"
   if ([System.IO.Path]::IsPathRooted($image)) { throw 'Theme image path must be relative.' }
   $imagePath = [System.IO.Path]::GetFullPath((Join-Path $directory $image))
@@ -161,10 +182,31 @@ function Read-DreamSkinTheme {
     throw 'Theme image must remain inside its theme directory and exist.'
   }
   Assert-DreamSkinImageFile -Path $imagePath -SkipImageMetadata:$SkipImageMetadata
+  $cssPath = $null
+  if ($theme.css) {
+    $css = "$($theme.css)"
+    if ([System.IO.Path]::IsPathRooted($css)) { throw 'Theme CSS path must be relative.' }
+    $cssPath = [System.IO.Path]::GetFullPath((Join-Path $directory $css))
+    if (-not (Test-DreamSkinThemePathWithin -Path $cssPath -Root $directory) -or
+      -not (Test-Path -LiteralPath $cssPath -PathType Leaf)) {
+      throw 'Theme CSS must remain inside its theme directory and exist.'
+    }
+    Assert-DreamSkinCssFile -Path $cssPath
+  }
+  $desktopSettings = Get-DreamSkinDefaultDesktopSettings
+  if ($theme.desktopSettings) {
+    $desktopSettings = [ordered]@{
+      appearanceLightCodeThemeId = "$($theme.desktopSettings.appearanceLightCodeThemeId)"
+      appearanceLightChromeTheme = "$($theme.desktopSettings.appearanceLightChromeTheme)"
+    }
+  }
+  Assert-DreamSkinDesktopSettings -Settings $desktopSettings
   return [pscustomobject]@{
     Directory = $directory
     ThemePath = $themePath
     ImagePath = $imagePath
+    CssPath = $cssPath
+    DesktopSettings = $desktopSettings
     Theme = $theme
   }
 }
@@ -183,6 +225,64 @@ function Write-DreamSkinTheme {
   Write-DreamSkinUtf8FileAtomically -Path $themePath -Content ($json + "`r`n")
 }
 
+function Copy-DreamSkinThemePack {
+  param(
+    [Parameter(Mandatory = $true)][object]$LoadedTheme,
+    [Parameter(Mandatory = $true)][string]$Destination,
+    [Parameter(Mandatory = $true)][string]$ManagedRoot
+  )
+  Ensure-DreamSkinManagedDirectory -Path $Destination -Root $ManagedRoot
+  $oldTheme = $null
+  try { $oldTheme = Read-DreamSkinTheme -ThemeDirectory $Destination -SkipImageMetadata } catch {}
+  $extension = [System.IO.Path]::GetExtension($LoadedTheme.ImagePath).ToLowerInvariant()
+  $imageName = 'art' + $extension
+  $imageTarget = Join-Path $Destination $imageName
+  $imageTemporary = Join-Path $Destination ('.dream-tmp-' + [guid]::NewGuid().ToString('N') + $extension)
+  $cssTarget = $null
+  $cssTemporary = $null
+  try {
+    Assert-DreamSkinNoReparseComponents -Path $imageTarget
+    Assert-DreamSkinNoReparseComponents -Path $imageTemporary
+    Copy-Item -LiteralPath $LoadedTheme.ImagePath -Destination $imageTemporary -Force
+    Assert-DreamSkinImageFile -Path $imageTemporary
+    Move-Item -LiteralPath $imageTemporary -Destination $imageTarget -Force
+    Assert-DreamSkinImageFile -Path $imageTarget
+
+    $theme = $LoadedTheme.Theme | ConvertTo-Json -Depth 8 | ConvertFrom-Json
+    $theme.image = $imageName
+    if ($LoadedTheme.CssPath) {
+      $cssName = 'theme.css'
+      $cssTarget = Join-Path $Destination $cssName
+      $cssTemporary = Join-Path $Destination ('.dream-tmp-' + [guid]::NewGuid().ToString('N') + '.css')
+      Assert-DreamSkinNoReparseComponents -Path $cssTarget
+      Assert-DreamSkinNoReparseComponents -Path $cssTemporary
+      Copy-Item -LiteralPath $LoadedTheme.CssPath -Destination $cssTemporary -Force
+      Assert-DreamSkinCssFile -Path $cssTemporary
+      Move-Item -LiteralPath $cssTemporary -Destination $cssTarget -Force
+      Assert-DreamSkinCssFile -Path $cssTarget
+      $theme | Add-Member -NotePropertyName css -NotePropertyValue $cssName -Force
+    } else {
+      $theme.PSObject.Properties.Remove('css')
+    }
+    Write-DreamSkinTheme -ThemeDirectory $Destination -Theme $theme
+  } finally {
+    Remove-Item -LiteralPath $imageTemporary -Force -ErrorAction SilentlyContinue
+    if ($cssTemporary) { Remove-Item -LiteralPath $cssTemporary -Force -ErrorAction SilentlyContinue }
+  }
+  foreach ($oldPath in @($oldTheme.ImagePath, $oldTheme.CssPath)) {
+    if (-not $oldPath) { continue }
+    $oldFull = [System.IO.Path]::GetFullPath($oldPath)
+    $kept = ($imageTarget -and
+        $oldFull.Equals([System.IO.Path]::GetFullPath($imageTarget), [System.StringComparison]::OrdinalIgnoreCase)) -or
+      ($cssTarget -and
+        $oldFull.Equals([System.IO.Path]::GetFullPath($cssTarget), [System.StringComparison]::OrdinalIgnoreCase))
+    if (-not $kept -and (Test-DreamSkinThemePathWithin -Path $oldPath -Root $Destination)) {
+      Remove-Item -LiteralPath $oldPath -Force -ErrorAction SilentlyContinue
+    }
+  }
+  return Read-DreamSkinTheme -ThemeDirectory $Destination
+}
+
 function Initialize-DreamSkinThemeStore {
   param(
     [Parameter(Mandatory = $true)][string]$SkillRoot,
@@ -192,42 +292,28 @@ function Initialize-DreamSkinThemeStore {
   foreach ($directory in @($paths.Root, $paths.Active, $paths.Saved, $paths.Images)) {
     Ensure-DreamSkinManagedDirectory -Path $directory -Root $paths.Root
   }
-  $assetRoot = Join-Path $SkillRoot 'assets'
-  $assetImage = Join-Path $assetRoot 'dream-reference.jpg'
-  Assert-DreamSkinImageFile -Path $assetImage
+  $bundledRoot = Join-Path $SkillRoot 'themes'
+  Assert-DreamSkinNoReparseComponents -Path $bundledRoot
+  if (-not (Test-Path -LiteralPath $bundledRoot -PathType Container)) {
+    throw "Bundled Windows themes are missing: $bundledRoot"
+  }
+  $bundledThemes = @()
+  foreach ($directory in Get-ChildItem -LiteralPath $bundledRoot -Directory -ErrorAction Stop) {
+    $bundledThemes += Read-DreamSkinTheme -ThemeDirectory $directory.FullName
+  }
+  if ($bundledThemes.Count -lt 1) { throw 'No valid bundled Windows themes were found.' }
+  foreach ($bundled in $bundledThemes) {
+    $destination = Join-Path $paths.Saved "$($bundled.Theme.id)"
+    $null = Copy-DreamSkinThemePack -LoadedTheme $bundled -Destination $destination -ManagedRoot $paths.Root
+  }
   $activeTheme = Join-Path $paths.Active 'theme.json'
   Assert-DreamSkinNoReparseComponents -Path $activeTheme
   if (-not (Test-Path -LiteralPath $activeTheme -PathType Leaf)) {
-    Ensure-DreamSkinManagedDirectory -Path $paths.Active -Root $paths.Root
-    Assert-DreamSkinNoReparseComponents -Path (Join-Path $paths.Active 'dream-reference.jpg')
-    $activeImage = Join-Path $paths.Active 'dream-reference.jpg'
-    Copy-Item -LiteralPath (Join-Path $assetRoot 'dream-reference.jpg') `
-      -Destination $activeImage -Force
-    Assert-DreamSkinNoReparseComponents -Path $activeImage
-    Assert-DreamSkinImageFile -Path $activeImage
-    $imageArchive = Join-Path $paths.Images 'dream-reference.jpg'
-    Assert-DreamSkinNoReparseComponents -Path $imageArchive
-    Copy-Item -LiteralPath (Join-Path $assetRoot 'dream-reference.jpg') `
-      -Destination $imageArchive -Force
-    Assert-DreamSkinNoReparseComponents -Path $imageArchive
-    Assert-DreamSkinImageFile -Path $imageArchive
-    Assert-DreamSkinNoReparseComponents -Path $activeTheme
-    Copy-Item -LiteralPath (Join-Path $assetRoot 'theme.json') -Destination $activeTheme -Force
-  }
-  $presetDirectory = Join-Path $paths.Saved 'preset-romantic-rose'
-  $presetTheme = Join-Path $presetDirectory 'theme.json'
-  Assert-DreamSkinNoReparseComponents -Path $presetDirectory
-  Assert-DreamSkinNoReparseComponents -Path $presetTheme
-  if (-not (Test-Path -LiteralPath $presetTheme -PathType Leaf)) {
-    Ensure-DreamSkinManagedDirectory -Path $presetDirectory -Root $paths.Root
-    $presetImage = Join-Path $presetDirectory 'dream-reference.jpg'
-    Assert-DreamSkinNoReparseComponents -Path $presetImage
-    Copy-Item -LiteralPath (Join-Path $assetRoot 'dream-reference.jpg') `
-      -Destination $presetImage -Force
-    Assert-DreamSkinNoReparseComponents -Path $presetImage
-    Assert-DreamSkinImageFile -Path $presetImage
-    Assert-DreamSkinNoReparseComponents -Path $presetTheme
-    Copy-Item -LiteralPath (Join-Path $assetRoot 'theme.json') -Destination $presetTheme -Force
+    $defaultTheme = $bundledThemes | Where-Object { $_.Theme.id -ceq 'arina' } | Select-Object -First 1
+    if ($null -eq $defaultTheme) { $defaultTheme = $bundledThemes[0] }
+    $themeCopy = $defaultTheme.Theme | ConvertTo-Json -Depth 8 | ConvertFrom-Json
+    $null = Set-DreamSkinActiveTheme -ImagePath $defaultTheme.ImagePath -CssPath $defaultTheme.CssPath `
+      -Theme $themeCopy -StateRoot $StateRoot
   }
   $null = Read-DreamSkinTheme -ThemeDirectory $paths.Active
   return $paths
@@ -239,9 +325,15 @@ function New-DreamSkinThemeImageName {
     [guid]::NewGuid().ToString('N').Substring(0, 8) + $Extension.ToLowerInvariant()
 }
 
+function New-DreamSkinThemeCssName {
+  return 'style-' + (Get-Date).ToString('yyyyMMdd-HHmmss-fff') + '-' +
+    [guid]::NewGuid().ToString('N').Substring(0, 8) + '.css'
+}
+
 function Set-DreamSkinActiveTheme {
   param(
     [Parameter(Mandatory = $true)][string]$ImagePath,
+    [AllowNull()][string]$CssPath,
     [AllowNull()][object]$Theme,
     [string]$Name,
     [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin')
@@ -252,21 +344,38 @@ function Set-DreamSkinActiveTheme {
   Ensure-DreamSkinManagedDirectory -Path $paths.Images -Root $paths.Root
   $source = [System.IO.Path]::GetFullPath($ImagePath)
   Assert-DreamSkinImageFile -Path $source
+  $cssSource = $null
+  if ($CssPath) {
+    $cssSource = [System.IO.Path]::GetFullPath($CssPath)
+    Assert-DreamSkinCssFile -Path $cssSource
+  }
   $extension = [System.IO.Path]::GetExtension($source).ToLowerInvariant()
   $oldImage = $null
-  try { $oldImage = (Read-DreamSkinTheme -ThemeDirectory $paths.Active).ImagePath } catch {}
+  $oldCss = $null
+  try {
+    $oldTheme = Read-DreamSkinTheme -ThemeDirectory $paths.Active
+    $oldImage = $oldTheme.ImagePath
+    $oldCss = $oldTheme.CssPath
+  } catch {}
   if ($null -eq $Theme) {
     $Theme = [pscustomobject]@{
       id = 'custom'
       name = '自定义主题'
       appearance = 'auto'
+      layout = 'adaptive'
       art = [pscustomobject]@{ focusX = $null; focusY = $null; safeArea = 'auto'; taskMode = 'auto' }
       palette = [pscustomobject]@{}
+      desktopSettings = [pscustomobject](Get-DreamSkinDefaultDesktopSettings)
     }
   }
   $imageName = New-DreamSkinThemeImageName -Extension $extension
   $target = Join-Path $paths.Active $imageName
   $temporary = Join-Path $paths.Active ('.dream-tmp-' + [guid]::NewGuid().ToString('N') + $extension)
+  $cssName = if ($cssSource) { New-DreamSkinThemeCssName } else { $null }
+  $cssTarget = if ($cssName) { Join-Path $paths.Active $cssName } else { $null }
+  $cssTemporary = if ($cssName) {
+    Join-Path $paths.Active ('.dream-tmp-' + [guid]::NewGuid().ToString('N') + '.css')
+  } else { $null }
   try {
     Assert-DreamSkinNoReparseComponents -Path $target
     Assert-DreamSkinNoReparseComponents -Path $temporary
@@ -276,10 +385,22 @@ function Set-DreamSkinActiveTheme {
     Move-Item -LiteralPath $temporary -Destination $target -Force
     Assert-DreamSkinNoReparseComponents -Path $target
     Assert-DreamSkinImageFile -Path $target
+    if ($cssSource) {
+      Assert-DreamSkinNoReparseComponents -Path $cssTarget
+      Assert-DreamSkinNoReparseComponents -Path $cssTemporary
+      Copy-Item -LiteralPath $cssSource -Destination $cssTemporary -Force
+      Assert-DreamSkinCssFile -Path $cssTemporary
+      Move-Item -LiteralPath $cssTemporary -Destination $cssTarget -Force
+      Assert-DreamSkinCssFile -Path $cssTarget
+      $Theme | Add-Member -NotePropertyName css -NotePropertyValue $cssName -Force
+    } else {
+      $Theme.PSObject.Properties.Remove('css')
+    }
     $Theme | Add-Member -NotePropertyName image -NotePropertyValue $imageName -Force
     if ($Name) { $Theme | Add-Member -NotePropertyName name -NotePropertyValue $Name -Force }
     if (-not $Theme.id) { $Theme | Add-Member -NotePropertyName id -NotePropertyValue 'custom' -Force }
     if (-not $Theme.appearance) { $Theme | Add-Member -NotePropertyName appearance -NotePropertyValue 'auto' -Force }
+    if (-not $Theme.layout) { $Theme | Add-Member -NotePropertyName layout -NotePropertyValue 'adaptive' -Force }
     if (-not $Theme.art) {
       $Theme | Add-Member -NotePropertyName art -NotePropertyValue `
         ([pscustomobject]@{ focusX = $null; focusY = $null; safeArea = 'auto'; taskMode = 'auto' }) -Force
@@ -290,11 +411,18 @@ function Set-DreamSkinActiveTheme {
     Write-DreamSkinTheme -ThemeDirectory $paths.Active -Theme $Theme
   } finally {
     Remove-Item -LiteralPath $temporary -Force -ErrorAction SilentlyContinue
+    if ($cssTemporary) { Remove-Item -LiteralPath $cssTemporary -Force -ErrorAction SilentlyContinue }
   }
   $sameImage = $oldImage -and ([System.IO.Path]::GetFullPath($oldImage) -ieq [System.IO.Path]::GetFullPath($target))
   if ($oldImage -and -not $sameImage -and
     (Test-DreamSkinThemePathWithin -Path $oldImage -Root $paths.Active)) {
     Remove-Item -LiteralPath $oldImage -Force -ErrorAction SilentlyContinue
+  }
+  $sameCss = $oldCss -and $cssTarget -and
+    ([System.IO.Path]::GetFullPath($oldCss) -ieq [System.IO.Path]::GetFullPath($cssTarget))
+  if ($oldCss -and -not $sameCss -and
+    (Test-DreamSkinThemePathWithin -Path $oldCss -Root $paths.Active)) {
+    Remove-Item -LiteralPath $oldCss -Force -ErrorAction SilentlyContinue
   }
   $imageArchive = Join-Path $paths.Images $imageName
   Assert-DreamSkinNoReparseComponents -Path $imageArchive
@@ -331,6 +459,16 @@ function Save-DreamSkinCurrentTheme {
   $theme.id = $id
   $theme.name = $trimmed
   $theme.image = $imageName
+  if ($active.CssPath) {
+    $cssName = 'theme.css'
+    $destinationCss = Join-Path $destination $cssName
+    Assert-DreamSkinNoReparseComponents -Path $destinationCss
+    Copy-Item -LiteralPath $active.CssPath -Destination $destinationCss -Force
+    Assert-DreamSkinCssFile -Path $destinationCss
+    $theme | Add-Member -NotePropertyName css -NotePropertyValue $cssName -Force
+  } else {
+    $theme.PSObject.Properties.Remove('css')
+  }
   Write-DreamSkinTheme -ThemeDirectory $destination -Theme $theme
   return Read-DreamSkinTheme -ThemeDirectory $destination
 }
@@ -372,7 +510,33 @@ function Use-DreamSkinSavedTheme {
   }
   $saved = Read-DreamSkinTheme -ThemeDirectory $directory
   $theme = $saved.Theme | ConvertTo-Json -Depth 8 | ConvertFrom-Json
-  return Set-DreamSkinActiveTheme -ImagePath $saved.ImagePath -Theme $theme -StateRoot $StateRoot
+  return Set-DreamSkinActiveTheme -ImagePath $saved.ImagePath -CssPath $saved.CssPath `
+    -Theme $theme -StateRoot $StateRoot
+}
+
+function Use-DreamSkinSavedThemeWithConfig {
+  param(
+    [Parameter(Mandatory = $true)][string]$ThemeDirectory,
+    [Parameter(Mandatory = $true)][string]$ConfigPath,
+    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin')
+  )
+  $saved = Read-DreamSkinTheme -ThemeDirectory $ThemeDirectory
+  $originalBytes = [System.IO.File]::ReadAllBytes($ConfigPath)
+  $configChanged = Set-DreamSkinDesktopTheme -ConfigPath $ConfigPath `
+    -DesktopSettings $saved.DesktopSettings
+  $appliedBytes = if ($configChanged) { [System.IO.File]::ReadAllBytes($ConfigPath) } else { $null }
+  try {
+    return Use-DreamSkinSavedTheme -ThemeDirectory $ThemeDirectory -StateRoot $StateRoot
+  } catch {
+    if ($configChanged) {
+      try {
+        Write-DreamSkinBytesAtomically -Path $ConfigPath -Bytes $originalBytes -ExpectedBytes $appliedBytes
+      } catch {
+        Write-Warning 'Theme activation failed and the native color rollback could not be completed safely.'
+      }
+    }
+    throw
+  }
 }
 
 function Set-DreamSkinPaused {

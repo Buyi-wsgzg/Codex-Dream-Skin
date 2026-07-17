@@ -7,8 +7,9 @@ import { readImageMetadata } from "./image-metadata.mjs";
 const scriptPath = fileURLToPath(import.meta.url);
 const here = path.dirname(scriptPath);
 const root = path.resolve(here, "..");
-const SKIN_VERSION = "1.2.0";
+const SKIN_VERSION = "1.3.0";
 const MAX_ART_BYTES = 16 * 1024 * 1024;
+const MAX_THEME_CSS_BYTES = 512 * 1024;
 const STRONG_THEME_AUDIT_MS = 30000;
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]", "::1"]);
 const BROWSER_ID_PATTERN = /^[A-Za-z0-9._-]{1,200}$/;
@@ -277,6 +278,7 @@ async function connectBrowserIdentityAnchor(port, expectedBrowserId) {
 
 const THEME_CHOICES = {
   appearance: new Set(["auto", "light", "dark"]),
+  layout: new Set(["adaptive", "classic"]),
   safeArea: new Set(["auto", "left", "right", "center", "none"]),
   taskMode: new Set(["auto", "ambient", "banner", "off"]),
 };
@@ -331,11 +333,41 @@ async function loadTheme(themeDir) {
   const art = raw.art && typeof raw.art === "object" && !Array.isArray(raw.art) ? raw.art : {};
   const palette = raw.palette && typeof raw.palette === "object" && !Array.isArray(raw.palette)
     ? raw.palette : {};
+  const copy = raw.copy && typeof raw.copy === "object" && !Array.isArray(raw.copy) ? raw.copy : {};
+  const css = normalizedText(raw.css, "css", null, 240);
+  let realCssPath = null;
+  let cssStat = null;
+  let cssBytes = null;
+  let cssText = "";
+  if (css) {
+    if (path.isAbsolute(css) || path.extname(css).toLowerCase() !== ".css") {
+      throw new Error("Theme CSS must be a relative .css path");
+    }
+    const cssPath = path.resolve(realThemeDir, css);
+    const relativeCss = path.relative(realThemeDir, cssPath);
+    if (!relativeCss || relativeCss.startsWith("..") || path.isAbsolute(relativeCss)) {
+      throw new Error("Theme CSS must remain inside the selected theme directory");
+    }
+    realCssPath = await fs.realpath(cssPath);
+    const realRelativeCss = path.relative(realThemeDir, realCssPath);
+    if (!realRelativeCss || realRelativeCss.startsWith("..") || path.isAbsolute(realRelativeCss)) {
+      throw new Error("Theme CSS cannot escape through a link or junction");
+    }
+    cssStat = await fs.stat(realCssPath);
+    if (!cssStat.isFile() || cssStat.size < 1 || cssStat.size > MAX_THEME_CSS_BYTES) {
+      throw new Error(`Theme CSS must be between 1 byte and ${MAX_THEME_CSS_BYTES / 1024} KB`);
+    }
+    cssBytes = await fs.readFile(realCssPath);
+    cssText = new TextDecoder("utf-8", { fatal: true }).decode(cssBytes);
+  }
   const theme = {
     id: normalizedText(raw.id, "id", "custom", 80),
     name: normalizedText(raw.name, "name", "Codex Dream Skin", 120),
+    version: normalizedText(raw.version, "version", "1", 40),
     image,
+    css,
     appearance: normalizedChoice(raw.appearance, "appearance", THEME_CHOICES.appearance, "auto"),
+    layout: normalizedChoice(raw.layout, "layout", THEME_CHOICES.layout, css ? "classic" : "adaptive"),
     art: {
       focusX: normalizedUnit(art.focusX, "art.focusX"),
       focusY: normalizedUnit(art.focusY, "art.focusY"),
@@ -343,6 +375,14 @@ async function loadTheme(themeDir) {
       taskMode: normalizedChoice(art.taskMode, "art.taskMode", THEME_CHOICES.taskMode, "auto"),
     },
     palette: {},
+    copy: {
+      brandIcon: normalizedText(copy.brandIcon, "copy.brandIcon", "✦", 16),
+      brandTitle: normalizedText(copy.brandTitle, "copy.brandTitle", "Codex Dream Skin", 120),
+      brandSubtitle: normalizedText(copy.brandSubtitle, "copy.brandSubtitle", "Codex App", 120),
+      signature: normalizedText(copy.signature, "copy.signature", "", 120),
+      tagline: normalizedText(copy.tagline, "copy.tagline", "", 160),
+      polaroidCaption: normalizedText(copy.polaroidCaption, "copy.polaroidCaption", "", 160),
+    },
   };
   if (typeof palette.accent === "string" && palette.accent.trim()) {
     const accent = palette.accent.trim();
@@ -370,23 +410,29 @@ async function loadTheme(themeDir) {
     .update(themeText, "utf8")
     .update("\0")
     .update(imageBytes)
+    .update("\0")
+    .update(cssBytes ?? Buffer.alloc(0))
     .digest("hex");
   return {
     theme,
     themePath,
     imagePath: realImagePath,
     imageBytes,
+    cssPath: realCssPath,
+    cssText,
     fingerprint,
-    sourceStamp: `${themeStat.size}:${themeStat.mtimeMs}:${imageStat.size}:${imageStat.mtimeMs}`,
+    sourceStamp: `${themeStat.size}:${themeStat.mtimeMs}:${imageStat.size}:${imageStat.mtimeMs}:` +
+      (cssStat ? `${cssStat.size}:${cssStat.mtimeMs}` : "none"),
   };
 }
 
 async function loadPayload(themeDir = path.join(root, "assets"), candidateTheme = null) {
   const loadedTheme = candidateTheme ?? await loadTheme(themeDir);
-  const [css, template] = await Promise.all([
+  const [baseCss, template] = await Promise.all([
     fs.readFile(path.join(root, "assets", "dream-skin.css"), "utf8"),
     fs.readFile(path.join(root, "assets", "renderer-inject.js"), "utf8"),
   ]);
+  const css = loadedTheme.cssText ? `${baseCss}\n\n${loadedTheme.cssText}` : baseCss;
   const extension = path.extname(loadedTheme.imagePath).toLowerCase();
   const mime = extension === ".jpg" || extension === ".jpeg" ? "image/jpeg"
     : extension === ".webp" ? "image/webp" : "image/png";
@@ -395,7 +441,7 @@ async function loadPayload(themeDir = path.join(root, "assets"), candidateTheme 
     .replace("__DREAM_CSS_JSON__", JSON.stringify(css))
     .replace("__DREAM_ART_JSON__", JSON.stringify(artDataUrl))
     .replace("__DREAM_THEME_JSON__", JSON.stringify(loadedTheme.theme));
-  const { imageBytes: _imageBytes, ...themeState } = loadedTheme;
+  const { imageBytes: _imageBytes, cssText: _cssText, ...themeState } = loadedTheme;
   return { ...themeState, payload };
 }
 
@@ -410,11 +456,13 @@ async function fileExists(filePath) {
 }
 
 async function readThemeSourceStamp(loadedTheme) {
-  const [themeStat, imageStat] = await Promise.all([
+  const [themeStat, imageStat, cssStat] = await Promise.all([
     fs.stat(loadedTheme.themePath),
     fs.stat(loadedTheme.imagePath),
+    loadedTheme.cssPath ? fs.stat(loadedTheme.cssPath) : Promise.resolve(null),
   ]);
-  return `${themeStat.size}:${themeStat.mtimeMs}:${imageStat.size}:${imageStat.mtimeMs}`;
+  return `${themeStat.size}:${themeStat.mtimeMs}:${imageStat.size}:${imageStat.mtimeMs}:` +
+    (cssStat ? `${cssStat.size}:${cssStat.mtimeMs}` : "none");
 }
 
 async function probeSession(session) {
@@ -539,6 +587,7 @@ async function removeFromSession(session) {
     if (state?.cleanup) return state.cleanup();
     document.documentElement?.classList.remove(
       'codex-dream-skin', 'dream-theme-light', 'dream-theme-dark',
+      'dream-layout-adaptive', 'dream-layout-classic',
       'dream-art-wide', 'dream-art-standard', 'dream-focus-left',
       'dream-focus-center', 'dream-focus-right', 'dream-safe-left',
       'dream-safe-center', 'dream-safe-right', 'dream-safe-none',
@@ -546,8 +595,10 @@ async function removeFromSession(session) {
     );
     for (const property of [
       '--dream-art', '--dream-art-position', '--dream-focus-x', '--dream-focus-y',
-      '--dream-accent', '--dream-accent-ink', '--dream-image-luma'
+      '--dream-accent', '--dream-accent-ink', '--dream-image-luma',
+      '--dream-tagline', '--dream-polaroid-caption'
     ]) document.documentElement?.style.removeProperty(property);
+    if (document.documentElement?.dataset?.dreamTheme) delete document.documentElement.dataset.dreamTheme;
     document.querySelectorAll('.dream-home').forEach((node) => node.classList.remove('dream-home'));
     document.querySelectorAll('.dream-task').forEach((node) => node.classList.remove('dream-task'));
     document.querySelectorAll('.dream-home-shell').forEach((node) => node.classList.remove('dream-home-shell'));
@@ -581,13 +632,33 @@ async function verifySession(session) {
     const home = document.querySelector('.dream-home');
     const suggestions = home?.querySelector('.group\\\\/home-suggestions') ?? null;
     const cards = suggestions ? [...suggestions.querySelectorAll('button')].map(box) : [];
+    const state = window.__CODEX_DREAM_SKIN_STATE__;
+    const chrome = document.getElementById('codex-dream-skin-chrome');
+    const shell = document.querySelector('main.main-surface');
+    const header = shell?.querySelector(':scope > header.app-header-tint') ?? null;
+    const ribbon = chrome?.querySelector('.dream-ribbon') ?? null;
+    const polaroid = chrome?.querySelector('.dream-polaroid') ?? null;
     const result = {
       installed: document.documentElement.classList.contains('codex-dream-skin'),
-      version: window.__CODEX_DREAM_SKIN_STATE__?.version ?? null,
+      version: state?.version ?? null,
       expectedVersion: ${JSON.stringify(SKIN_VERSION)},
+      themeId: state?.config?.id ?? null,
+      themeLayout: state?.config?.layout ?? null,
       stylePresent: Boolean(document.getElementById('codex-dream-skin-style')),
-      chromePresent: Boolean(document.getElementById('codex-dream-skin-chrome')),
-      chromePointerEvents: getComputedStyle(document.getElementById('codex-dream-skin-chrome') || document.body).pointerEvents,
+      chromePresent: Boolean(chrome),
+      chromeDisplay: getComputedStyle(chrome || document.body).display,
+      chromePointerEvents: getComputedStyle(chrome || document.body).pointerEvents,
+      chrome: box(chrome),
+      shell: box(shell),
+      header: box(header),
+      ribbon: {
+        display: getComputedStyle(ribbon || document.body).display,
+        box: box(ribbon),
+      },
+      polaroid: {
+        display: getComputedStyle(polaroid || document.body).display,
+        box: box(polaroid),
+      },
       homePresent: Boolean(home),
       suggestionsPresent: Boolean(suggestions),
       hero: box(home?.firstElementChild?.firstElementChild?.firstElementChild),
@@ -600,9 +671,33 @@ async function verifySession(session) {
         y: document.documentElement.scrollHeight > document.documentElement.clientHeight,
       },
     };
+    const classicChromeFits = result.themeLayout !== 'classic' || (
+      Boolean(result.chrome) && Boolean(result.shell) &&
+      result.chrome.width > 0 && result.chrome.height > 0 &&
+      Math.abs(result.chrome.x - result.shell.x) <= 2 &&
+      Math.abs(result.chrome.y - result.shell.y) <= 2 &&
+      Math.abs(result.chrome.width - result.shell.width) <= 2 &&
+      Math.abs(result.chrome.height - result.shell.height) <= 2 &&
+      Boolean(result.header) &&
+      Math.abs(result.header.x - result.shell.x) <= 2 &&
+      result.header.width <= result.shell.width + 2 &&
+      result.header.x + result.header.width <= result.viewport.width + 2
+    );
+    const bundledClassic = result.themeLayout === 'classic' &&
+      ['arina', 'fiona'].includes(result.themeId);
+    const classicHomeDecorations = !bundledClassic || !result.homePresent || (
+      result.ribbon.display !== 'none' && Boolean(result.ribbon.box) &&
+      result.ribbon.box.width > 0 && result.ribbon.box.height > 0 &&
+      (result.viewport.width <= 1120 || (
+        result.polaroid.display !== 'none' && Boolean(result.polaroid.box) &&
+        result.polaroid.box.width > 0 && result.polaroid.box.height > 0
+      ))
+    );
     result.pass = result.installed && result.version === result.expectedVersion &&
       result.stylePresent && result.chromePresent &&
       result.chromePointerEvents === 'none' && Boolean(result.composer) && Boolean(result.sidebar) &&
+      (result.themeLayout !== 'classic' || result.chromeDisplay !== 'none') &&
+      classicChromeFits && classicHomeDecorations &&
       (!result.homePresent || (Boolean(result.hero) &&
         (!result.suggestionsPresent || (result.cards.length >= 2 && result.cards.length <= 4))));
     return result;

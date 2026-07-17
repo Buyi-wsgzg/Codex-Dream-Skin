@@ -2,8 +2,8 @@
 
 ## User-visible claims
 
-1. The home screen paints one UI-free wallpaper continuously across sidebar and main content, with a live native heading, the real project utility/composer surface, and any suggestion cards rendered by the current Codex host.
-2. Sidebar, main area, header, and composer use coordinated readability layers; home remains expressive while normal task routes use a stronger quiet veil.
+1. Adaptive themes paint one UI-free wallpaper continuously across sidebar and main content; classic themes apply their own complete layout/CSS while keeping the heading, project utility, composer, and suggestion cards native.
+2. Arina and Fiona retain independent image, copy, palette, native light-chrome color, and classic layout assets; switching one must not leak the other theme's color tokens.
 3. All real Codex controls remain interactive; the skin is not a screenshot overlay.
 4. The skin survives route changes and renderer reloads while the injector daemon runs.
 5. The official Store package and `app.asar` remain unchanged.
@@ -22,14 +22,16 @@
 - Update resilience: resolve the current `OpenAI.Codex` Appx location dynamically for launch. A versioned path saved for cleanup must be revalidated against the registered package full/family identity before any process is stopped.
 - Restart consent: an existing normal Codex window is never force-closed without explicit CLI authorization or shortcut confirmation.
 - Config safety: Chinese project names, LF/CRLF choice, quoted target keys, table-header comments, and unrelated TOML sections survive install/selective restore; ambiguous target shapes fail unchanged, exact recovery keeps a copy of the replaced current file, and install refuses both registered and state-recorded old Codex processes.
-- Theme safety: empty/over-16 MB images, over-16384px/50MP dimensions, path escapes, symlinks/junctions, malformed JSON, and unsupported formats are rejected before payload construction.
-- Tray lifecycle: pause/resume reflects the clicked state, bundled Arina Hashimoto theme is present on first install, and complete restore terminates any separately launched tray before it can reapply the skin.
+- Theme safety: empty/over-16 MB images, over-16384px/50MP dimensions, CSS over 512 KiB, invalid UTF-8 CSS, path escapes, symlinks/junctions, malformed JSON, and unsupported formats are rejected before payload construction.
+- Tray lifecycle: pause/resume reflects the clicked state, bundled Arina and Fiona themes are present on first install, Switch Theme hot-applies without stopping Codex, and complete restore terminates any separately launched tray before it can reapply the skin.
 
 ## Visual checks
 
 - 1280x820 initial home: the declared focus stays in frame, the text-safe side remains readable, the real project utility row and composer form one coherent surface, and no horizontal scrolling appears.
 - Narrower window: accept Codex's native responsive card reduction or omission; no essential control is covered and wallpaper cropping preserves the focus/safe-area contract.
 - Normal task: the wallpaper is visibly quieter than home, messages keep high contrast, and composer does not overlap content.
+- Classic Arina home/task: rose/cream surfaces, banner copy, ribbon/polaroid decorations, composer, and native light chrome remain rose-toned with no Fiona purple leakage.
+- Classic Fiona home/task: purple/pink surfaces, Fiona copy, decorations, composer, and native light chrome remain internally consistent.
 - Inspect the sidebar, header, wallpaper edges, native card labels when present, project utility row, composer controls, scrollbar, dialogs, and menus.
 - Reject black/transparent sidebar artifacts, clipped controls, duplicated/disconnected project labels, rasterized native controls, fake UI inside the wallpaper, weak contrast, or decorations intercepting clicks.
 

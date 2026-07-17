@@ -13,6 +13,7 @@ try {
   foreach ($bomScript in @(
     (Join-Path $Root 'scripts\theme-windows.ps1'),
     (Join-Path $Root 'scripts\tray-dream-skin.ps1'),
+    (Join-Path $Root 'scripts\switch-theme.ps1'),
     (Join-Path $PSScriptRoot 'run-tests.ps1')
   )) {
     $bomBytes = [System.IO.File]::ReadAllBytes($bomScript)
@@ -348,24 +349,65 @@ try {
   $themeStateRoot = Join-Path $temporaryRoot 'theme-state'
   $themePaths = Initialize-DreamSkinThemeStore -SkillRoot $Root -StateRoot $themeStateRoot
   $initialTheme = Read-DreamSkinTheme -ThemeDirectory $themePaths.Active
-  if ($initialTheme.Theme.id -cne 'preset-romantic-rose' -or
-    $initialTheme.Theme.name -cne '桥本有菜' -or
-    $initialTheme.Theme.appearance -cne 'auto' -or
+  if ($initialTheme.Theme.id -cne 'arina' -or
+    $initialTheme.Theme.name -cne '桥本有菜 · 玫瑰粉' -or
+    $initialTheme.Theme.appearance -cne 'light' -or
+    $initialTheme.Theme.layout -cne 'classic' -or
     $initialTheme.Theme.art.safeArea -cne 'left' -or
-    $initialTheme.Theme.art.taskMode -cne 'ambient' -or
-    [System.IO.Path]::GetExtension($initialTheme.ImagePath) -cne '.jpg') {
-    throw 'Default Windows theme did not seed the Arina Hashimoto wallpaper contract.'
+    $initialTheme.Theme.art.taskMode -cne 'off' -or
+    [System.IO.Path]::GetExtension($initialTheme.ImagePath) -cne '.png' -or
+    [System.IO.Path]::GetExtension($initialTheme.CssPath) -cne '.css' -or
+    "$($initialTheme.DesktopSettings.appearanceLightChromeTheme)" -notmatch '#C96F82') {
+    throw 'Default Windows theme did not seed the classic Arina theme pack.'
   }
   $preseededThemes = @(Get-DreamSkinSavedThemes -StateRoot $themeStateRoot)
-  if ($preseededThemes.Count -ne 1 -or
-    $preseededThemes[0].Id -cne 'preset-romantic-rose' -or
-    $preseededThemes[0].Name -cne '桥本有菜') {
-    throw 'Arina Hashimoto was not preseeded in the Windows saved-theme menu.'
+  if ($preseededThemes.Count -ne 2 -or
+    @($preseededThemes | Where-Object Id -CEQ 'arina').Count -ne 1 -or
+    @($preseededThemes | Where-Object Id -CEQ 'fiona').Count -ne 1) {
+    throw 'Arina and Fiona were not preseeded as independent Windows theme packs.'
+  }
+  $arinaCss = Read-DreamSkinUtf8File -Path $initialTheme.CssPath
+  if ($arinaCss -match '(?i)#B65CFF|#C47BFF|dream-purple|dream-violet') {
+    throw 'Arina theme CSS still contains Fiona purple palette tokens.'
+  }
+  if ($arinaCss -notmatch '(?s)#codex-dream-skin-chrome\s*\{[^}]*display:\s*block\s*!important') {
+    throw 'Classic Arina CSS does not override the adaptive chrome visibility guard.'
+  }
+  if ($arinaCss -notmatch '(?s)main\.main-surface\s*>\s*header\.app-header-tint\s*\{[^}]*position:\s*absolute\s*!important;[^}]*inset:\s*0\s+0\s+auto\s+0\s*!important') {
+    throw 'Classic Arina CSS does not anchor the fixed Codex header to the main surface.'
+  }
+  $fionaTheme = Read-DreamSkinTheme -ThemeDirectory (Join-Path $themePaths.Saved 'fiona')
+  $fionaCss = Read-DreamSkinUtf8File -Path $fionaTheme.CssPath
+  if ($fionaCss -notmatch '(?s)main\.main-surface\s*>\s*header\.app-header-tint\s*\{[^}]*position:\s*absolute\s*!important;[^}]*inset:\s*0\s+0\s+auto\s+0\s*!important') {
+    throw 'Classic Fiona CSS does not anchor the fixed Codex header to the main surface.'
+  }
+  if ("$($fionaTheme.DesktopSettings.appearanceLightChromeTheme)" -notmatch '#B65CFF') {
+    throw 'Fiona theme did not retain its independent native purple accent.'
+  }
+  $themeConfigPath = Join-Path $temporaryRoot 'theme-switch.toml'
+  $themeConfigOriginal = "[desktop]`r`nappearanceTheme = `"system`"`r`nfollowUpQueueMode = `"queue`"`r`n"
+  Write-DreamSkinUtf8FileAtomically -Path $themeConfigPath -Content $themeConfigOriginal
+  $null = Set-DreamSkinDesktopTheme -ConfigPath $themeConfigPath `
+    -DesktopSettings $initialTheme.DesktopSettings
+  $null = Set-DreamSkinDesktopTheme -ConfigPath $themeConfigPath `
+    -DesktopSettings $fionaTheme.DesktopSettings
+  $themeConfig = Read-DreamSkinUtf8File -Path $themeConfigPath
+  if ($themeConfig -notmatch '#B65CFF' -or $themeConfig -match '#C96F82' -or
+    $themeConfig -notmatch 'appearanceTheme = "system"' -or
+    $themeConfig -notmatch 'followUpQueueMode = "queue"') {
+    throw 'Theme switching did not atomically update the native accent while preserving unrelated desktop settings.'
+  }
+  $fionaActive = Use-DreamSkinSavedTheme -ThemeDirectory $fionaTheme.Directory -StateRoot $themeStateRoot
+  if ($fionaActive.Theme.id -cne 'fiona' -or -not $fionaActive.CssPath -or
+    -not (Test-DreamSkinThemePathWithin -Path $fionaActive.CssPath -Root $themePaths.Active)) {
+    throw 'Classic theme CSS did not round-trip from the saved theme pack to the active store.'
   }
   $updatedTheme = Set-DreamSkinActiveTheme -ImagePath (Join-Path $Root 'assets\dream-reference.jpg') `
     -Theme $null -Name '测试主题' -StateRoot $themeStateRoot
   if ($updatedTheme.Theme.name -cne '测试主题' -or
     $updatedTheme.Theme.id -cne 'custom' -or
+    $updatedTheme.Theme.layout -cne 'adaptive' -or
+    $updatedTheme.CssPath -or
     $updatedTheme.Theme.art.safeArea -cne 'auto' -or
     $updatedTheme.Theme.art.taskMode -cne 'auto' -or
     -not (Test-DreamSkinThemePathWithin -Path $updatedTheme.ImagePath -Root $themePaths.Active)) {
@@ -374,11 +416,11 @@ try {
   $null = Initialize-DreamSkinThemeStore -SkillRoot $Root -StateRoot $themeStateRoot
   $idempotentTheme = Read-DreamSkinTheme -ThemeDirectory $themePaths.Active
   if ($idempotentTheme.Theme.id -cne 'custom' -or
-    @(Get-DreamSkinSavedThemes -StateRoot $themeStateRoot).Count -ne 1) {
-    throw 'Theme-store initialization overwrote the active custom theme or duplicated its bundled preset.'
+    @(Get-DreamSkinSavedThemes -StateRoot $themeStateRoot).Count -ne 2) {
+    throw 'Theme-store initialization overwrote the active custom theme or duplicated bundled presets.'
   }
   $savedTheme = Save-DreamSkinCurrentTheme -Name '已保存主题' -StateRoot $themeStateRoot
-  if ($savedTheme.Theme.name -cne '已保存主题' -or @(Get-DreamSkinSavedThemes -StateRoot $themeStateRoot).Count -ne 2) {
+  if ($savedTheme.Theme.name -cne '已保存主题' -or @(Get-DreamSkinSavedThemes -StateRoot $themeStateRoot).Count -ne 3) {
     throw 'Saved theme creation or discovery failed.'
   }
   $null = Use-DreamSkinSavedTheme -ThemeDirectory $savedTheme.Directory -StateRoot $themeStateRoot
@@ -469,8 +511,23 @@ try {
     throw 'Tray menu metadata enumeration still performs full image parsing on every open.'
   }
   $restoreSource = Read-DreamSkinUtf8File -Path (Join-Path $Root 'scripts\restore-dream-skin.ps1')
-  if (-not $restoreSource.Contains('Stop-DreamSkinTrayProcess')) {
-    throw 'Complete restore does not stop a separately launched tray process.'
+  if (-not $restoreSource.Contains('Stop-DreamSkinTrayProcess') -or
+    -not $restoreSource.Contains('Codex Dream Skin - Switch Theme.lnk')) {
+    throw 'Complete restore does not stop the tray or remove the theme switch shortcut.'
+  }
+  $installSource = Read-DreamSkinUtf8File -Path (Join-Path $Root 'scripts\install-dream-skin.ps1')
+  if (-not $installSource.Contains('Codex Dream Skin - Switch Theme.lnk')) {
+    throw 'Install does not create the theme switch shortcut.'
+  }
+  $switchSource = Read-DreamSkinUtf8File -Path (Join-Path $Root 'scripts\switch-theme.ps1')
+  if (-not $switchSource.Contains('Use-DreamSkinSavedThemeWithConfig') -or
+    -not $switchSource.Contains('Get-DreamSkinVerifiedCdpIdentity') -or
+    -not $switchSource.Contains("Join-Path `$PSScriptRoot 'start-dream-skin.ps1'") -or
+    -not $switchSource.Contains('has no verified Dream Skin CDP endpoint') -or
+    -not $switchSource.Contains('-PromptRestart') -or
+    -not $switchSource.Contains("Read-Host 'Press Enter to close'") -or
+    $switchSource.Contains('Stop-DreamSkinCodex')) {
+    throw 'Theme switcher does not distinguish a verified live CDP session from stale state.'
   }
   $startSource = Read-DreamSkinUtf8File -Path (Join-Path $Root 'scripts\start-dream-skin.ps1')
   $stateReadIndex = $startSource.IndexOf('$previousState = Read-DreamSkinState', [System.StringComparison]::Ordinal)
@@ -491,14 +548,16 @@ try {
   }
 
   $rendererSource = Read-DreamSkinUtf8File -Path (Join-Path $Root 'assets\renderer-inject.js')
-  foreach ($requiredRendererBehavior in @('dream-home-utility', 'artMetadata', 'detectShellAppearance')) {
+  foreach ($requiredRendererBehavior in @(
+    'dream-home-utility', 'artMetadata', 'detectShellAppearance', 'dream-layout-classic', 'dream-polaroid'
+  )) {
     if (-not $rendererSource.Contains($requiredRendererBehavior)) {
       throw "Renderer adaptive behavior is missing: $requiredRendererBehavior"
     }
   }
   $injectorSource = Read-DreamSkinUtf8File -Path (Join-Path $Root 'scripts\injector.mjs')
   foreach ($requiredInjectorBehavior in @(
-    'MAX_ART_BYTES', 'createHash', 'readImageMetadata', '50MP safety limit', 'STRONG_THEME_AUDIT_MS',
+    'MAX_ART_BYTES', 'MAX_THEME_CSS_BYTES', 'createHash', 'readImageMetadata', '50MP safety limit', 'STRONG_THEME_AUDIT_MS',
     'Page.addScriptToEvaluateOnNewDocument', 'Page.removeScriptToEvaluateOnNewDocument', 'earlyPayloadFor'
   )) {
     if (-not $injectorSource.Contains($requiredInjectorBehavior)) {
@@ -511,6 +570,7 @@ try {
     'Ensure-DreamSkinManagedDirectory',
     'Get-DreamSkinValidatedImageMetadata',
     '16384px / 50MP safety limit',
+    'Assert-DreamSkinCssFile',
     'Assert-DreamSkinImageFile -Path $temporary',
     'Assert-DreamSkinImageFile -Path $imageArchive'
   )) {
@@ -530,6 +590,9 @@ try {
   if ($LASTEXITCODE -ne 0) { throw 'Injector self-test failed.' }
   & $node.Path (Join-Path $Root 'scripts\injector.mjs') --check-payload --theme-dir $themePaths.Active *> $null
   if ($LASTEXITCODE -ne 0) { throw 'Managed theme payload validation failed.' }
+  & $node.Path (Join-Path $Root 'scripts\injector.mjs') --check-payload `
+    --theme-dir (Join-Path $themePaths.Saved 'arina') *> $null
+  if ($LASTEXITCODE -ne 0) { throw 'Classic Arina CSS payload construction failed.' }
   $savedErrorActionPreference = $ErrorActionPreference
   $ErrorActionPreference = 'Continue'
   & $node.Path (Join-Path $Root 'scripts\injector.mjs') --check-payload --theme-dir $oversizedTheme 2>$null

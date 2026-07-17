@@ -64,14 +64,14 @@ cd macos
   --id preset-romantic-rose
 ```
 
-Windows 使用本地主题仓库与系统托盘，并会预置同一套「桥本有菜」。首次从仓库使用：
+Windows 使用本地主题仓库与系统托盘，并预置「桥本有菜 · 玫瑰粉」和「薛凯琪 · 梦幻紫」两套带独立布局/CSS 的主题。首次从仓库使用：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\windows\scripts\install-dream-skin.ps1
 powershell -ExecutionPolicy Bypass -File .\windows\scripts\start-dream-skin.ps1
 ```
 
-启动后可直接从「已保存主题 → 桥本有菜」切换；不需要跨目录手动导入。托盘里的「更换背景图」仍可导入你自己的纯背景，保存后继续一键切换。
+启动后可从「已保存主题」或桌面 `Codex Dream Skin - Switch Theme` 快捷方式热切换；watcher 运行时无需重启 Codex。托盘里的「更换背景图」会保留当前主题布局并替换纯背景，保存后仍可继续一键切换。
 
 > 可下载的用户源图是 [`docs/images/presets/romantic-rose-source.png`](./docs/images/presets/romantic-rose-source.png)（`1672 × 941`）；macOS 一键预设使用 [`macos/presets/preset-romantic-rose/background.jpg`](./macos/presets/preset-romantic-rose/background.jpg)（规范化派生 `2560 × 1440`）。上面两个效果图包含真实 UI，**只作预览，绝不能当背景导入**。背景为用户提供的 AI 生成示例，不代表 OpenAI/Codex 官方视觉或背书；公开再分发前请确认人物与素材权利。
 
@@ -122,7 +122,7 @@ powershell -ExecutionPolicy Bypass -File .\windows\scripts\start-dream-skin.ps1
 ## 它能做什么
 
 - **真·可交互**：侧栏、建议卡、项目选择、输入框都是原生控件，不是整窗假截图贴上去
-- **真背景层**：一张 16:9 纯壁纸连续铺满整窗，首页突出氛围，任务页自动降低干扰
+- **真背景层**：自适应主题可把 16:9 纯壁纸连续铺满整窗；Windows classic 主题也可使用各自完整的横幅/卡片布局
 - **可换图**：换一张喜欢的纯背景，自适应焦点、安全区和配色后变成你的主题
 - **可存主题**：macOS 菜单栏与 Windows 系统托盘都能保存/切换本地主题
 - **可恢复**：一键还原官方外观

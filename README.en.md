@@ -71,16 +71,18 @@ cd macos
 ```
 
 Windows has a persistent local theme store and system-tray controls, and seeds
-the same Arina Hashimoto preset. For the first repo-based setup:
+two independent classic-layout packs: **Arina Hashimoto · Rose Pink** and
+**Fiona Sit · Dream Purple**. For the first repo-based setup:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\windows\scripts\install-dream-skin.ps1
 powershell -ExecutionPolicy Bypass -File .\windows\scripts\start-dream-skin.ps1
 ```
 
-After launch, switch directly through **已保存主题 → 桥本有菜**; no cross-folder
-manual import is required. **更换背景图** still imports your own UI-free
-wallpaper, which can then be saved for one-click switching.
+After launch, switch from **Saved themes** or the desktop
+`Codex Dream Skin - Switch Theme` shortcut. An active watcher hot-switches the
+current window without restarting Codex. **Change background** keeps the active
+layout/CSS while replacing its UI-free wallpaper.
 
 > The downloadable user source is [`docs/images/presets/romantic-rose-source.png`](./docs/images/presets/romantic-rose-source.png) (`1672 × 941`); the macOS one-click preset uses the normalized derived [`background.jpg`](./macos/presets/preset-romantic-rose/background.jpg) (`2560 × 1440`). Do not import either screenshot above: they contain real UI and are previews only. The background is a user-provided AI-generated example, not an official OpenAI/Codex visual or endorsement; confirm likeness and asset rights before redistributing it.
 
@@ -135,7 +137,7 @@ for the eight individual styles.
 ## What it does
 
 - **Real UI** — Sidebar, cards, project picker, and input stay native. Not a fake full-window screenshot.
-- **Continuous wallpaper** — One 16:9 image spans the full window; adaptive focus, safe-area, and route treatment keep native content readable.
+- **Real background layer** — Adaptive themes can span one 16:9 image across the window; Windows classic packs can instead provide a complete banner/card layout.
 - **Swappable art** — Drop in a UI-free image you like and it becomes your theme.
 - **Saved themes** — Switch local themes from the macOS menu bar or Windows system tray.
 - **Restorable** — One-click restore to the stock look.

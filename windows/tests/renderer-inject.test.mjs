@@ -63,6 +63,7 @@ function createFixture({
 
   root = {
     className: shellAppearance,
+    dataset: {},
     classList: makeClassList(rootClasses, queueRootClassMutation),
     getAttribute() { return null; },
     style: {
@@ -290,6 +291,38 @@ assert.equal(configured.routeClasses.has("dream-task"), false);
 assert.equal(configured.utilityClasses.has("dream-home-utility"), true);
 assert.equal(configured.context.window.__CODEX_DREAM_SKIN_STATE__.cleanup(), true);
 assert.equal(configured.utilityClasses.has("dream-home-utility"), false);
+
+const classic = createFixture({ shellPresent: true, homePresent: true, utilityPresent: true });
+const classicResult = vm.runInNewContext(buildPayload({
+  id: "arina",
+  name: "Arina",
+  version: "1.0.0",
+  appearance: "light",
+  layout: "classic",
+  palette: { accent: "#C96F82" },
+  copy: {
+    brandTitle: "Arina <Rose>",
+    tagline: "Classic rose",
+    polaroidCaption: "Always together",
+  },
+}), classic.context);
+assert.equal(classicResult.adaptive, false);
+assert.equal(classicResult.themeId, "arina");
+assert.equal(classic.rootClasses.has("dream-layout-classic"), true);
+assert.equal(classic.rootClasses.has("dream-art-wide"), false);
+assert.equal(classic.rootClasses.has("dream-art-standard"), false);
+assert.equal(classic.rootClasses.has("dream-task-off"), true);
+assert.equal(classic.utilityClasses.has("dream-home-utility"), false);
+assert.equal(classic.context.document.documentElement.dataset.dreamTheme, "arina");
+const classicChrome = classic.nodes.get("codex-dream-skin-chrome");
+assert.match(classicChrome.innerHTML, /Arina &lt;Rose&gt;/);
+assert.equal(classicChrome.style.left, "290px");
+assert.equal(classicChrome.style.top, "36px");
+assert.equal(classicChrome.style.width, "990px");
+assert.equal(classicChrome.style.height, "784px");
+assert.equal(classic.rootStyles.get("--dream-tagline"), '"Classic rose"');
+assert.equal(classic.context.window.__CODEX_DREAM_SKIN_STATE__.cleanup(), true);
+assert.equal(classic.context.document.documentElement.dataset.dreamTheme, undefined);
 
 const analysisPixels = new Uint8ClampedArray(48 * 12 * 4);
 for (let index = 0; index < 48 * 12; index += 1) {
