@@ -1,7 +1,7 @@
 # Runtime notes
 
 - The skin discovers the current `OpenAI.Codex` package on every run, requires a non-development `Store` signature kind, and launches its `ChatGPT.exe` with an explicit `--remote-debugging-address=127.0.0.1` and selected port.
-- Node.js 22 or newer is required for the built-in WebSocket client. The runtime's real `process.execPath` and version are recorded in state, even when PATH points at a shim.
+- Node.js 22 or newer is required for the built-in WebSocket client. Scripts search `CODEX_DREAM_SKIN_NODE`, PATH, common install locations, and compatible runtimes already downloaded by Codex; the real `process.execPath` and version are recorded in state.
 - The preferred port is `9335`; the default launcher scans up to 100 ports when it is occupied. An explicit occupied port is rejected.
 - CDP is accepted only when its listener PID resolves to the exact Store `ChatGPT.exe`, every WebSocket URL is loopback and same-port, `/json/version` exposes a valid Browser ID, and the renderer has expected Codex shell markers.
 - Loopback prevents access from the LAN, but CDP does not authenticate other processes running as the same Windows user. Treat the themed session as a local debugging session, run only trusted local software, and restore when it is no longer needed.

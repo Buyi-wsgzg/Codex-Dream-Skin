@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param()
 
 $ErrorActionPreference = 'Stop'
@@ -10,6 +10,17 @@ $temporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) "codex-dream-skin-t
 New-Item -ItemType Directory -Path $temporaryRoot | Out-Null
 
 try {
+  foreach ($bomScript in @(
+    (Join-Path $Root 'scripts\theme-windows.ps1'),
+    (Join-Path $Root 'scripts\tray-dream-skin.ps1'),
+    (Join-Path $PSScriptRoot 'run-tests.ps1')
+  )) {
+    $bomBytes = [System.IO.File]::ReadAllBytes($bomScript)
+    if ($bomBytes.Length -lt 3 -or $bomBytes[0] -ne 0xEF -or $bomBytes[1] -ne 0xBB -or $bomBytes[2] -ne 0xBF) {
+      throw "PowerShell 5.1 requires a UTF-8 BOM for scripts containing non-ASCII text: $bomScript"
+    }
+  }
+
   $configPath = Join-Path $temporaryRoot 'config.toml'
   $backupPath = Join-Path $temporaryRoot 'config.before-dream-skin.toml'
   $projectName = -join @([char]0x4EE3, [char]0x7801, [char]0x9879, [char]0x76EE, [char]0x7532)
@@ -519,8 +530,12 @@ try {
   if ($LASTEXITCODE -ne 0) { throw 'Injector self-test failed.' }
   & $node.Path (Join-Path $Root 'scripts\injector.mjs') --check-payload --theme-dir $themePaths.Active *> $null
   if ($LASTEXITCODE -ne 0) { throw 'Managed theme payload validation failed.' }
-  & $node.Path (Join-Path $Root 'scripts\injector.mjs') --check-payload --theme-dir $oversizedTheme *> $null
-  if ($LASTEXITCODE -eq 0) { throw 'Node injector accepted an image over the 16 MB limit.' }
+  $savedErrorActionPreference = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  & $node.Path (Join-Path $Root 'scripts\injector.mjs') --check-payload --theme-dir $oversizedTheme 2>$null
+  $oversizedThemeExitCode = $LASTEXITCODE
+  $ErrorActionPreference = $savedErrorActionPreference
+  if ($oversizedThemeExitCode -eq 0) { throw 'Node injector accepted an image over the 16 MB limit.' }
   & $node.Path (Join-Path $PSScriptRoot 'renderer-inject.test.mjs')
   if ($LASTEXITCODE -ne 0) { throw 'Renderer auxiliary-window regression test failed.' }
   & $node.Path (Join-Path $PSScriptRoot 'injector-bootstrap.test.mjs')

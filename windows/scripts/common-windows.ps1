@@ -78,20 +78,46 @@ function Get-DreamSkinProcessExecutablePath {
 function Get-DreamSkinNodeRuntime {
   param([int]$MinimumMajor = 22)
 
-  $command = Get-Command node.exe -ErrorAction SilentlyContinue
-  if (-not $command) { $command = Get-Command node -ErrorAction SilentlyContinue }
-  if (-not $command) { throw "Node.js $MinimumMajor or newer is required and was not found in PATH." }
-  $version = "$(& $command.Source -p 'process.versions.node' 2>$null)".Trim()
-  if ($LASTEXITCODE -ne 0 -or -not $version) { throw 'The Node.js runtime could not be validated.' }
-  $runtimePath = "$(& $command.Source -p 'process.execPath' 2>$null)".Trim()
-  if ($LASTEXITCODE -ne 0 -or -not $runtimePath -or -not (Test-Path -LiteralPath $runtimePath)) {
-    throw 'The Node.js executable path could not be validated.'
+  $candidates = [System.Collections.Generic.List[string]]::new()
+  if ($env:CODEX_DREAM_SKIN_NODE) { $candidates.Add($env:CODEX_DREAM_SKIN_NODE) }
+  $command = Get-Command node.exe -CommandType Application -ErrorAction SilentlyContinue |
+    Select-Object -First 1
+  if (-not $command) {
+    $command = Get-Command node -CommandType Application -ErrorAction SilentlyContinue |
+      Select-Object -First 1
   }
-  $major = 0
-  if (-not [int]::TryParse(($version -split '\.')[0], [ref]$major) -or $major -lt $MinimumMajor) {
-    throw "Node.js $MinimumMajor or newer is required; found $version at $runtimePath."
+  if ($command) { $candidates.Add($command.Source) }
+  foreach ($candidate in @(
+    (Join-Path $env:ProgramFiles 'nodejs\node.exe'),
+    $(if (${env:ProgramFiles(x86)}) { Join-Path ${env:ProgramFiles(x86)} 'nodejs\node.exe' }),
+    (Join-Path $env:LOCALAPPDATA 'Programs\nodejs\node.exe'),
+    (Join-Path $env:LOCALAPPDATA 'Volta\bin\node.exe'),
+    (Join-Path $HOME 'scoop\apps\nodejs-lts\current\node.exe')
+  )) {
+    if ($candidate) { $candidates.Add($candidate) }
   }
-  return [pscustomobject]@{ Path = $runtimePath; Version = $version; Major = $major }
+  $runtimePattern = Join-Path $HOME '.cache\codex-runtimes\*\dependencies\node\bin\node.exe'
+  Get-ChildItem -Path $runtimePattern -File -ErrorAction SilentlyContinue |
+    Sort-Object LastWriteTimeUtc -Descending | ForEach-Object { $candidates.Add($_.FullName) }
+
+  $seen = @{}
+  foreach ($candidate in $candidates) {
+    $expanded = [Environment]::ExpandEnvironmentVariables($candidate)
+    if ($seen.ContainsKey($expanded) -or -not (Test-Path -LiteralPath $expanded -PathType Leaf)) { continue }
+    $seen[$expanded] = $true
+    try {
+      $version = "$(& $expanded -p 'process.versions.node' 2>$null)".Trim()
+      if ($LASTEXITCODE -ne 0 -or -not $version) { continue }
+      $runtimePath = "$(& $expanded -p 'process.execPath' 2>$null)".Trim()
+      if ($LASTEXITCODE -ne 0 -or -not $runtimePath -or -not (Test-Path -LiteralPath $runtimePath)) { continue }
+      $major = 0
+      if (-not [int]::TryParse(($version -split '\.')[0], [ref]$major) -or $major -lt $MinimumMajor) { continue }
+      & $runtimePath -e "if (typeof fetch !== 'function' || typeof WebSocket !== 'function') process.exit(1)" 2>$null
+      if ($LASTEXITCODE -ne 0) { continue }
+      return [pscustomobject]@{ Path = [System.IO.Path]::GetFullPath($runtimePath); Version = $version; Major = $major }
+    } catch {}
+  }
+  throw "Node.js $MinimumMajor or newer with built-in fetch and WebSocket is required. Install Node.js LTS or set CODEX_DREAM_SKIN_NODE to node.exe."
 }
 
 function ConvertTo-DreamSkinCodexInstall {

@@ -1,5 +1,14 @@
 # Windows Changelog
 
+## Unreleased
+
+### 修复
+
+- 含中文菜单或测试文本的 PowerShell 脚本使用 UTF-8 BOM，避免 Windows PowerShell 5.1 按系统代码页解析后出现语法错误。
+- Windows PowerShell 5.1 原子替换已有文件时使用同目录临时回滚文件，避免空备份路径导致安装、切换或恢复失败。
+- CRLF 配置中的多行数组会在写入前正确拒绝；恢复原本不存在的外观键时不再因空字符串绑定留下额外空行。
+- Node.js 22+ 解析兼容 `CODEX_DREAM_SKIN_NODE`、常见安装位置与 Codex 已下载的本地运行时，不再只依赖系统 `PATH`。
+
 ## 1.2.0 — 2026-07-17
 
 ### 新增
